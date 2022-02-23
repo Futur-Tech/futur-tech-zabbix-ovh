@@ -1,0 +1,79 @@
+#!/bin/bash
+
+source "$(dirname "$0")/ft_util_inc_var"
+
+if [ -z "$1" ] || [ -z "$2" ]
+then
+    $S_LOG -s err -d $S_NAME "Needed variable SOURCE and TARGET are missing. Cannot do file deploy! SOURCE=$1 TARGET=$2 OPTION=$3"
+    exit 1
+else
+    SOURCE=$1
+    SOURCE_NICE="${SOURCE/#$(dirname "$S_DIR_PATH")\//}" # this will shorten the SOURCE string in order to create less text in logs (note, it will only shorten if the path is in the same ../ dir as this script)
+    TARGET=$2
+    OPTION=$3
+fi
+
+
+#############################
+## BACKUP FILES
+#############################
+
+backup () {    
+    cp "$1" "$1.$(date +\%Y\%m\%d\-\%H\%M\%S).bak"
+    $S_LOG -s debug -d $S_NAME -d "$1" "backup of $1"   
+}
+
+if [ -d "$TARGET" ]
+then
+    for file in ${TARGET%/}/*; do
+        [ -f "$file" ] || break
+        [ "${file##*.}" != "bak" ] || continue # only process files with the same ext than the source    
+        [[ $OPTION == *"NO-BACKUP"* ]] || backup $file
+    done
+elif [ -f "$TARGET" ] 
+then
+    [[ $OPTION == *"NO-BACKUP"* ]] || backup $TARGET
+fi
+
+
+#############################
+## DEPLOY FILES
+#############################
+
+returncode=255 
+
+if [ -d "${TARGET}" ]
+then
+    
+    find "${TARGET%/}/" -type f ! -name '*.bak' -delete 2> >($S_LOG -s err -d $S_NAME -d "$SOURCE_NICE" -i) > >($S_LOG -d $S_NAME -d "$SOURCE_NICE" -i)
+    returncode=$?
+    $S_LOG -s $returncode -d $S_NAME -d "$SOURCE_NICE" "delete existing files exited with code $returncode"
+
+    cp -R "${SOURCE%/}/." "${TARGET%/}/" 2> >($S_LOG -s err -d $S_NAME -d "$SOURCE_NICE" -i) > >($S_LOG -d $S_NAME -d "$SOURCE_NICE" -i)
+    returncode=$?
+
+else
+    [ -d "$(dirname "$TARGET")" ] || mkdir -p "$(dirname "$TARGET")"
+    cp -p "$SOURCE" "$TARGET" 2> >($S_LOG -s err -d $S_NAME -d "$SOURCE_NICE" -i) > >($S_LOG -d $S_NAME -d "$SOURCE_NICE" -i)
+    returncode=$? # store the exit code of the command
+
+fi
+$S_LOG -s $returncode -d $S_NAME -d "$SOURCE_NICE" "transfer exited with code $returncode"
+
+
+#############################
+#############################
+## CLEANUP BIN BAK FILES
+#############################
+#############################
+
+if [[ ! $OPTION == *"NO-BACKUP"* ]]
+then
+    if [ -d "${TARGET}" ] 
+    then
+        $S_DIR_PATH/ft_util_bak-cleaner "${TARGET%/}/"
+    elif [ -f "${TARGET}" ] 
+    then
+        $S_DIR_PATH/ft_util_bak-cleaner "${TARGET}"
+    fi
+fi

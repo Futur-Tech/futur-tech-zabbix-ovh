@@ -1,0 +1,161 @@
+#!/bin/bash
+
+source "$(dirname "$0")/ft_util_inc_var"
+
+# $S_LOG -d $S_NAME "Start $S_NAME $*"
+
+usage()
+{
+    echo "Usage: $0 \
+[-s <path_source_conf>] \
+[-r update all configs in folder path_destination_conf] \
+[-d <path_destination_conf (it can be a folder if -r)>] \
+[-y for dry run]" 1>&2
+    exit 1
+}
+
+while getopts "yrs:d:" o; do
+    case "${o}" in
+        s)
+            SOURCE_CONF="${OPTARG}"
+            if [ ! -f "$SOURCE_CONF" ]
+            then
+                echo "$SOURCE_CONF not a file."
+                usage
+            fi
+            ;;
+
+        d)
+            DEST_CONF="${OPTARG}"
+            ;;
+
+        r)
+            RECURSIVE=true
+            ;;
+        y)
+            DRY_RUN=true
+            ;;
+
+        : | *)
+            usage
+            ;;
+    esac
+done
+shift "$((OPTIND - 1))"
+
+if [ -z "$SOURCE_CONF" ] || [ -z "$DEST_CONF" ] ; then usage ; fi  
+
+conf_update() {
+    
+    # Regex match example "export SSH_USER=root"
+    ## Group 1: "export "
+    ## Group 2: "SSH_USER"
+    ## Group 3: "root"
+    regex="(.*\ )([a-zA-Z_][a-zA-Z_0-9]*)=(.*)" 
+    
+    local sourceFile="$1"
+    local targetFile="$2"
+
+    $S_LOG -s debug -d $S_NAME -d "$targetFile" "Updating with $sourceFile"
+
+    # Search: Looping through the existing conf file to store the variables and values into an array
+    # Replace: Looping through the new conf file to find variables replace values if in the array
+    declare -a arrSteps
+    declare -A arrFiles
+    declare -A arrConf
+    arrSteps+=(search replace)
+    arrFiles+=([search]=$targetFile [replace]=$sourceFile)
+
+    for step in "${arrSteps[@]}"
+    do 
+        if [ "$step" = "replace" ]; then [[ $DRY_RUN ]] ||  > "$targetFile" ; fi # empty the target file
+
+        while IFS="" read -r line || [ -n "$line" ]
+        do
+            if [[ "$line" =~ \#$regex ]] # matching commented line with "variable=value" inside
+            then
+                if [ "$step" = "replace" ]; then [[ $DRY_RUN ]] || printf '%s\n' "$line" >> "$targetFile" ; fi
+            elif [[ "$line" =~ $regex ]]
+            then
+
+                if [ "$step" = "search" ]; then arrConf[${BASH_REMATCH[2]}]=${BASH_REMATCH[3]}; fi
+                if [ "$step" = "replace" ] 
+                then
+                    if [ -n "${arrConf[${BASH_REMATCH[2]}]}" ] #check if variable name is in the array
+                    then 
+                        VALUE=${arrConf[${BASH_REMATCH[2]}]}
+                        $S_LOG -s debug -d $S_NAME -d "$targetFile" "Kept: ${BASH_REMATCH[2]}=$VALUE"
+                        unset arrConf[${BASH_REMATCH[2]}]
+                    else 
+                        VALUE=${BASH_REMATCH[3]}
+                        $S_LOG -s warn -d $S_NAME -d "$targetFile" "Default: ${BASH_REMATCH[2]}=$VALUE"
+                    fi
+                    [[ $DRY_RUN ]] || printf '%s\n' "${BASH_REMATCH[1]}${BASH_REMATCH[2]}=$VALUE" >> "$targetFile" 
+                fi
+            else 
+                if [ "$step" = "replace" ]; then [[ $DRY_RUN ]] || printf '%s\n' "$line" >> "$targetFile" ; fi
+            fi
+        done < ${arrFiles[$step]}
+    done
+    for index in "${!arrConf[@]}"; do $S_LOG -s warn -d $S_NAME -d "$targetFile" "Remove: $index=${arrConf[$index]}"; done
+    unset $arrSteps
+    unset $arrConf
+    unset $arrFiles
+
+    $S_LOG -d $S_NAME -d "$targetFile" "Updated with ${sourceFile/#$(dirname "$S_DIR_PATH")\//}" #Shorter path for better log view
+
+}
+
+conf_create() {
+    if [[ $DRY_RUN ]]
+    then
+        $S_LOG -s $? -d $S_NAME "Copy new $SOURCE_CONF ----> $DEST_CONF"
+    else 
+        mkdir -p "$(dirname "$DEST_CONF")" && cp "$SOURCE_CONF" "$DEST_CONF"
+        $S_LOG -s $? -d $S_NAME "Copy new $SOURCE_CONF ----> $DEST_CONF"
+    fi
+}
+
+if [ "$RECURSIVE" = true ] 
+then
+    if [ -d "$DEST_CONF" ]
+    then
+        $S_LOG -d $S_NAME -d "$DEST_CONF" "Looping throught files in folder"
+        for file in ${DEST_CONF%/}/*; do
+            [ -f "$file" ] || break
+            [ "${file##*.}" = "${SOURCE_CONF##*.}" ] || continue # only process files with the same ext than the source
+            
+            $S_LOG -d $S_NAME -d "$file" "========================"
+
+            $S_LOG -s debug -d $S_NAME -d "$file" "Create backup of file $file"
+            [[ $DRY_RUN ]] || cp "$file" "$file.$(date +\%Y\%m\%d\-\%H\%M\%S).bak"
+            
+            conf_update "$SOURCE_CONF" "$file"
+
+            $S_LOG -d $S_NAME -d "$file" "========================"
+            
+        done
+        if [ -z "$(ls -A ${DEST_CONF})" ]; then
+            conf_create
+        else
+            [[ $DRY_RUN ]] || $S_DIR_PATH/ft_util_bak-cleaner "${DEST_CONF%/}/"
+        fi
+    
+    else
+        conf_create
+    fi
+else 
+    if [ -f "$DEST_CONF" ]
+    then
+        $S_LOG -d $S_NAME -d "$DEST_CONF" "Create backup of file $DEST_CONF"
+        [[ $DRY_RUN ]] || cp "$DEST_CONF" "$DEST_CONF.$(date +\%Y\%m\%d\-\%H\%M\%S).bak"
+
+        conf_update "$SOURCE_CONF" "$DEST_CONF"
+
+        [[ $DRY_RUN ]] || $S_DIR_PATH/ft_util_bak-cleaner "$(readlink -f "$DEST_CONF")"
+    else
+        conf_create
+    fi
+fi
+
+$S_LOG -d $S_NAME "End $S_NAME $*"
