@@ -2,7 +2,12 @@
 
 # -*- encoding: utf-8 -*-
 
-# Usage: /usr/local/bin/futur-tech-zabbix-ovh/ovh-api-get.py <conf_name (without .conf)> <api_path>
+# Usage: /usr/local/bin/futur-tech-zabbix-ovh/ovh-api-get.py <conf_name (without .conf)> <api_path> <loop_api_path>
+# <loop_api_path> Should be used when the <api_path> return a list which should be looped through replacing #loop#
+# Example:
+# /usr/lib/zabbix/externalscripts/ovh-api-get.py default_api /email/domain ## This will list email domains
+# /usr/lib/zabbix/externalscripts/ovh-api-get.py default_api /email/domain /email/domain/#loop#/account ## This will return a JSON with all email accounts for each email domain
+
 
 import sys
 import json
@@ -34,6 +39,19 @@ client = ovh.Client(
 )
 
 result = client.get( api_path )
+
+# Check if need to loop through the result
+if len(sys.argv)>3:
+    loop_api_path=str(sys.argv[3])
+    result_loop = []
+    for value in result:
+        result_loop_tmp = client.get(loop_api_path.replace("#loop#", value))
+        for value_tmp in result_loop_tmp:
+            result_dict = {"source_result" : value, "loop_result" : value_tmp}
+            result_loop.append(result_dict)
+            
+    # Now we replace previous results by our new results        
+    result=result_loop
 
 # Pretty print
 print(json.dumps(result, indent=4))
