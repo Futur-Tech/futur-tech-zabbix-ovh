@@ -1,0 +1,343 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<zabbix_export>
+    <version>5.0</version>
+    <date>2022-02-24T00:56:12Z</date>
+    <groups>
+        <group>
+            <name>Templates/Futur-Tech/Web</name>
+        </group>
+    </groups>
+    <templates>
+        <template>
+            <template>Template Futur-Tech OVH API</template>
+            <name>Template Futur-Tech OVH API</name>
+            <groups>
+                <group>
+                    <name>Templates/Futur-Tech/Web</name>
+                </group>
+            </groups>
+            <applications>
+                <application>
+                    <name>-- Raw Data --</name>
+                </application>
+            </applications>
+            <discovery_rules>
+                <discovery_rule>
+                    <name>Domain Discovery</name>
+                    <type>EXTERNAL</type>
+                    <key>ovh-api-get.py[&quot;{$OVH_API_CONF_NAME}&quot;,&quot;/domain/zone&quot;]</key>
+                    <delay>10h</delay>
+                    <item_prototypes>
+                        <item_prototype>
+                            <name>[{#DOMAIN}] Zone DNS Last Update</name>
+                            <type>EXTERNAL</type>
+                            <key>ovh-api-get.py[&quot;{$OVH_API_CONF_NAME}&quot;,&quot;/domain/zone/{#DOMAIN}&quot;]</key>
+                            <delay>30m</delay>
+                            <units>unixtime</units>
+                            <application_prototypes>
+                                <application_prototype>
+                                    <name>[{#DOMAIN}] DNS</name>
+                                </application_prototype>
+                            </application_prototypes>
+                            <preprocessing>
+                                <step>
+                                    <type>JSONPATH</type>
+                                    <params>$.lastUpdate</params>
+                                </step>
+                                <step>
+                                    <type>JAVASCRIPT</type>
+                                    <params>return Date.parse(value)</params>
+                                </step>
+                                <step>
+                                    <type>MULTIPLIER</type>
+                                    <params>0.001</params>
+                                </step>
+                            </preprocessing>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <expression>{now()}-{last()}&lt;{$OVH_DNS_CHANGED_WARN}</expression>
+                                    <name>[{#DOMAIN}] Zone DNS has been updated in the last {$OVH_DNS_CHANGED_WARN}</name>
+                                    <opdata>Update date: {ITEM.LASTVALUE1}</opdata>
+                                    <url>https://www.ovh.com/manager/web/#/domain/{#DOMAIN}/information</url>
+                                    <priority>WARNING</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                    </item_prototypes>
+                    <lld_macro_paths>
+                        <lld_macro_path>
+                            <lld_macro>{#DOMAIN}</lld_macro>
+                            <path>$.discovery</path>
+                        </lld_macro_path>
+                    </lld_macro_paths>
+                    <preprocessing>
+                        <step>
+                            <type>JAVASCRIPT</type>
+                            <params>//Convert array into a discovery-ready JSON object
+// https://www.zabbix.com/forum/zabbix-help/419391-utilizing-jsonpath-to-setup-an-lld-macros
+var array = JSON.parse(value)
+var len = array.length;
+var x = 0
+output = &quot;{ \&quot;data\&quot; :[&quot;
+for (; x &lt; len - 1; x++){
+output += &quot;{\&quot;discovery\&quot;: \&quot;&quot; + array[x] + &quot;\&quot;},&quot;
+}
+output += &quot;{\&quot;discovery\&quot;: \&quot;&quot; + array[x] + &quot;\&quot;}&quot;
+output += &quot;]}&quot;
+return output</params>
+                        </step>
+                        <step>
+                            <type>JSONPATH</type>
+                            <params>$.data</params>
+                        </step>
+                    </preprocessing>
+                </discovery_rule>
+                <discovery_rule>
+                    <name>Email Discovery</name>
+                    <type>EXTERNAL</type>
+                    <key>ovh-api-get.py[&quot;{$OVH_API_CONF_NAME}&quot;,&quot;/email/domain&quot;,&quot;/email/domain/#loop#/account&quot;]</key>
+                    <delay>10h</delay>
+                    <item_prototypes>
+                        <item_prototype>
+                            <name>[{#ACCOUNT}@{#DOMAIN}] Email Account Is Blocked</name>
+                            <type>DEPENDENT</type>
+                            <key>email.domain.account.isblocked[{#DOMAIN},{#ACCOUNT}]</key>
+                            <delay>0</delay>
+                            <trends>0</trends>
+                            <value_type>TEXT</value_type>
+                            <application_prototypes>
+                                <application_prototype>
+                                    <name>[{#DOMAIN}] Email Accounts</name>
+                                </application_prototype>
+                            </application_prototypes>
+                            <preprocessing>
+                                <step>
+                                    <type>JSONPATH</type>
+                                    <params>$.isBlocked</params>
+                                </step>
+                                <step>
+                                    <type>DISCARD_UNCHANGED_HEARTBEAT</type>
+                                    <params>6h</params>
+                                </step>
+                            </preprocessing>
+                            <master_item>
+                                <key>ovh-api-get.py[&quot;{$OVH_API_CONF_NAME}&quot;,&quot;/email/domain/{#DOMAIN}/account/{#ACCOUNT}&quot;]</key>
+                            </master_item>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <expression>{last()}&lt;&gt;&quot;false&quot;</expression>
+                                    <name>[{#ACCOUNT}@{#DOMAIN}] Email Account is blocked</name>
+                                    <url>https://www.ovh.com/manager/web/#/email_domain/{#DOMAIN}/email</url>
+                                    <priority>HIGH</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <name>[{#ACCOUNT}@{#DOMAIN}] Email Account Space Available</name>
+                            <type>DEPENDENT</type>
+                            <key>email.domain.account.size[{#DOMAIN},{#ACCOUNT}]</key>
+                            <delay>0</delay>
+                            <units>bytes</units>
+                            <application_prototypes>
+                                <application_prototype>
+                                    <name>[{#DOMAIN}] Email Accounts</name>
+                                </application_prototype>
+                            </application_prototypes>
+                            <preprocessing>
+                                <step>
+                                    <type>JSONPATH</type>
+                                    <params>$.size</params>
+                                </step>
+                            </preprocessing>
+                            <master_item>
+                                <key>ovh-api-get.py[&quot;{$OVH_API_CONF_NAME}&quot;,&quot;/email/domain/{#DOMAIN}/account/{#ACCOUNT}&quot;]</key>
+                            </master_item>
+                        </item_prototype>
+                        <item_prototype>
+                            <name>[{#ACCOUNT}@{#DOMAIN}] Email Account Raw Data</name>
+                            <type>EXTERNAL</type>
+                            <key>ovh-api-get.py[&quot;{$OVH_API_CONF_NAME}&quot;,&quot;/email/domain/{#DOMAIN}/account/{#ACCOUNT}&quot;]</key>
+                            <delay>1h</delay>
+                            <trends>0</trends>
+                            <value_type>TEXT</value_type>
+                            <applications>
+                                <application>
+                                    <name>-- Raw Data --</name>
+                                </application>
+                            </applications>
+                            <preprocessing>
+                                <step>
+                                    <type>DISCARD_UNCHANGED_HEARTBEAT</type>
+                                    <params>1d</params>
+                                </step>
+                            </preprocessing>
+                        </item_prototype>
+                        <item_prototype>
+                            <name>[{#ACCOUNT}@{#DOMAIN}] Email Account Space Used</name>
+                            <type>EXTERNAL</type>
+                            <key>ovh-api-get.py[&quot;{$OVH_API_CONF_NAME}&quot;,&quot;/email/domain/{#DOMAIN}/account/{#ACCOUNT}/usage&quot;]</key>
+                            <delay>6h</delay>
+                            <units>bytes</units>
+                            <application_prototypes>
+                                <application_prototype>
+                                    <name>[{#DOMAIN}] Email Accounts</name>
+                                </application_prototype>
+                            </application_prototypes>
+                            <preprocessing>
+                                <step>
+                                    <type>JSONPATH</type>
+                                    <params>$.quota</params>
+                                </step>
+                            </preprocessing>
+                        </item_prototype>
+                        <item_prototype>
+                            <name>[{#ACCOUNT}@{#DOMAIN}] Email Account Space Update Quota</name>
+                            <type>EXTERNAL</type>
+                            <key>ovh-api-post.py[&quot;{$OVH_API_CONF_NAME}&quot;,&quot;/email/domain/{#DOMAIN}/account/{#ACCOUNT}/updateUsage&quot;]</key>
+                            <delay>8h</delay>
+                            <trends>0</trends>
+                            <value_type>TEXT</value_type>
+                            <application_prototypes>
+                                <application_prototype>
+                                    <name>[{#DOMAIN}] Email Accounts</name>
+                                </application_prototype>
+                            </application_prototypes>
+                            <preprocessing>
+                                <step>
+                                    <type>DISCARD_UNCHANGED_HEARTBEAT</type>
+                                    <params>1d</params>
+                                </step>
+                            </preprocessing>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <expression>{last()}&lt;&gt;123</expression>
+                                    <name>[{#ACCOUNT}@{#DOMAIN}] Email Account space update request failed</name>
+                                    <opdata>Latest update request output: {ITEM.LASTVALUE1}</opdata>
+                                    <url>https://www.ovh.com/manager/web/#/email_domain/{#DOMAIN}/email</url>
+                                    <priority>WARNING</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                    </item_prototypes>
+                    <trigger_prototypes>
+                        <trigger_prototype>
+                            <expression>({Template Futur-Tech OVH API:ovh-api-get.py[&quot;{$OVH_API_CONF_NAME}&quot;,&quot;/email/domain/{#DOMAIN}/account/{#ACCOUNT}/usage&quot;].last()}/{Template Futur-Tech OVH API:email.domain.account.size[{#DOMAIN},{#ACCOUNT}].last()})*100&gt;85</expression>
+                            <name>[{#ACCOUNT}@{#DOMAIN}] Email Account is almost full</name>
+                            <opdata>Used: {ITEM.LASTVALUE1} Available: {ITEM.LASTVALUE2}</opdata>
+                            <priority>AVERAGE</priority>
+                            <dependencies>
+                                <dependency>
+                                    <name>[{#ACCOUNT}@{#DOMAIN}] Email Account is full</name>
+                                    <expression>({Template Futur-Tech OVH API:ovh-api-get.py[&quot;{$OVH_API_CONF_NAME}&quot;,&quot;/email/domain/{#DOMAIN}/account/{#ACCOUNT}/usage&quot;].last()}/{Template Futur-Tech OVH API:email.domain.account.size[{#DOMAIN},{#ACCOUNT}].last()})*100&gt;99</expression>
+                                </dependency>
+                            </dependencies>
+                        </trigger_prototype>
+                        <trigger_prototype>
+                            <expression>({Template Futur-Tech OVH API:ovh-api-get.py[&quot;{$OVH_API_CONF_NAME}&quot;,&quot;/email/domain/{#DOMAIN}/account/{#ACCOUNT}/usage&quot;].last()}/{Template Futur-Tech OVH API:email.domain.account.size[{#DOMAIN},{#ACCOUNT}].last()})*100&gt;99</expression>
+                            <name>[{#ACCOUNT}@{#DOMAIN}] Email Account is full</name>
+                            <opdata>Used: {ITEM.LASTVALUE1} Available: {ITEM.LASTVALUE2}</opdata>
+                            <url>https://www.ovh.com/manager/web/#/email_domain/{#DOMAIN}/email</url>
+                            <priority>HIGH</priority>
+                        </trigger_prototype>
+                    </trigger_prototypes>
+                    <lld_macro_paths>
+                        <lld_macro_path>
+                            <lld_macro>{#ACCOUNT}</lld_macro>
+                            <path>$.loop_result</path>
+                        </lld_macro_path>
+                        <lld_macro_path>
+                            <lld_macro>{#DOMAIN}</lld_macro>
+                            <path>$.source_result</path>
+                        </lld_macro_path>
+                    </lld_macro_paths>
+                </discovery_rule>
+                <discovery_rule>
+                    <name>Telephony Discovery</name>
+                    <type>EXTERNAL</type>
+                    <key>ovh-api-get.py[&quot;{$OVH_API_CONF_NAME}&quot;,&quot;/telephony&quot;,&quot;/telephony/#loop#/line&quot;]</key>
+                    <delay>10h</delay>
+                    <item_prototypes>
+                        <item_prototype>
+                            <name>[{#ACCOUNT} - {#SERVICE}] Telephony Service Description</name>
+                            <type>EXTERNAL</type>
+                            <key>ovh-api-get.py[&quot;{$OVH_API_CONF_NAME}&quot;,&quot;/telephony/{#ACCOUNT}/line/{#SERVICE}&quot;]</key>
+                            <delay>20m</delay>
+                            <trends>0</trends>
+                            <value_type>TEXT</value_type>
+                            <application_prototypes>
+                                <application_prototype>
+                                    <name>Telephony [{#ACCOUNT} - {#SERVICE}]</name>
+                                </application_prototype>
+                            </application_prototypes>
+                            <preprocessing>
+                                <step>
+                                    <type>JSONPATH</type>
+                                    <params>$.description</params>
+                                </step>
+                            </preprocessing>
+                        </item_prototype>
+                        <item_prototype>
+                            <name>[{#ACCOUNT} - {#SERVICE}] Telephony Service Latest Registration</name>
+                            <type>EXTERNAL</type>
+                            <key>ovh-api-get.py[&quot;{$OVH_API_CONF_NAME}&quot;,&quot;/telephony/{#ACCOUNT}/line/{#SERVICE}/lastRegistrations&quot;]</key>
+                            <delay>20m</delay>
+                            <units>unixtime</units>
+                            <application_prototypes>
+                                <application_prototype>
+                                    <name>Telephony [{#ACCOUNT} - {#SERVICE}]</name>
+                                </application_prototype>
+                            </application_prototypes>
+                            <preprocessing>
+                                <step>
+                                    <type>JSONPATH</type>
+                                    <params>$.[0].datetime</params>
+                                </step>
+                                <step>
+                                    <type>JAVASCRIPT</type>
+                                    <params>return Date.parse(value)</params>
+                                </step>
+                                <step>
+                                    <type>MULTIPLIER</type>
+                                    <params>0.001</params>
+                                </step>
+                            </preprocessing>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <expression>{now()}-{last()}&lt;{$OVH_TEL_REGISTRATION_WARN}</expression>
+                                    <name>Telephony Service Latest Registration for more {$OVH_TEL_REGISTRATION_WARN}</name>
+                                    <opdata>Latest Registration date: {ITEM.LASTVALUE1}</opdata>
+                                    <url>https://www.ovhtelecom.fr/manager/#/telephony/{#ACCOUNT}/line/{#SERVICE}/detailsOffer</url>
+                                    <priority>WARNING</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                    </item_prototypes>
+                    <lld_macro_paths>
+                        <lld_macro_path>
+                            <lld_macro>{#ACCOUNT}</lld_macro>
+                            <path>$.source_result</path>
+                        </lld_macro_path>
+                        <lld_macro_path>
+                            <lld_macro>{#SERVICE}</lld_macro>
+                            <path>$.loop_result</path>
+                        </lld_macro_path>
+                    </lld_macro_paths>
+                </discovery_rule>
+            </discovery_rules>
+            <macros>
+                <macro>
+                    <macro>{$OVH_API_CONF_NAME}</macro>
+                    <value>default_api</value>
+                </macro>
+                <macro>
+                    <macro>{$OVH_DNS_CHANGED_WARN}</macro>
+                    <value>1d</value>
+                </macro>
+                <macro>
+                    <macro>{$OVH_TEL_REGISTRATION_WARN}</macro>
+                    <value>3h</value>
+                </macro>
+            </macros>
+        </template>
+    </templates>
+</zabbix_export>
