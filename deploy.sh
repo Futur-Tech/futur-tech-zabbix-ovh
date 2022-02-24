@@ -26,6 +26,7 @@ $S_LOG -s $? -d $S_NAME "Installing Python3 OVH returned EXIT_CODE=$?"
 if [ ! -d "${ETC_DIR}" ] ; then mkdir "${ETC_DIR}" ; $S_LOG -s $? -d $S_NAME "Creating ${ETC_DIR} returned EXIT_CODE=$?" ; fi
 
 $S_DIR/ft-util/ft_util_file-deploy "$S_DIR/bin/ovh-api-get.py" "${BIN_DIR}/ovh-api-get.py"
+$S_DIR/ft-util/ft_util_file-deploy "$S_DIR/bin/ovh-api-post.py" "${BIN_DIR}/ovh-api-post.py"
 $S_DIR/ft-util/ft_util_conf-update -s "$S_DIR/etc/default_api.conf" -d "${ETC_DIR}/" -r
 
 echo
