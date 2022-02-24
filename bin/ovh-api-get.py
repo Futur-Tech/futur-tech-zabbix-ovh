@@ -45,7 +45,7 @@ if len(sys.argv)>3:
     loop_api_path=str(sys.argv[3])
     result_loop = []
     for value in result:
-        result_loop_tmp = client.get(loop_api_path.replace("#loop#", value))
+        result_loop_tmp = client.get(loop_api_path.replace("#loop#", str(value)))
         for value_tmp in result_loop_tmp:
             result_dict = {"source_result" : value, "loop_result" : value_tmp}
             result_loop.append(result_dict)
