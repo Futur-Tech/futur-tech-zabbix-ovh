@@ -45,6 +45,7 @@ From Zabbix Server you can test API calls
 
 ## This will return a JSON with all email accounts for each email domain
 /usr/lib/zabbix/externalscripts/ovh-api-get.py default_api /email/domain /email/domain/#loop#/account
+
 ## Request quota update for email test@test.fr
 /usr/lib/zabbix/externalscripts/ovh-api-post.py default_api /email/domain/test.fr/account/test/updateUsage
 ```
