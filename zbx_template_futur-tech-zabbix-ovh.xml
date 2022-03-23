@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <zabbix_export>
     <version>5.0</version>
-    <date>2022-02-24T16:53:40Z</date>
+    <date>2022-03-23T16:22:19Z</date>
     <groups>
         <group>
             <name>Templates/Futur-Tech/Web</name>
@@ -24,7 +24,7 @@
             </applications>
             <discovery_rules>
                 <discovery_rule>
-                    <name>Domain Discovery</name>
+                    <name>Domain discovery</name>
                     <type>EXTERNAL</type>
                     <key>ovh-api-get.py[&quot;{$OVH_API_CONF_NAME}&quot;,&quot;/domain/zone&quot;]</key>
                     <delay>10h</delay>
@@ -94,7 +94,7 @@ return output</params>
                     </preprocessing>
                 </discovery_rule>
                 <discovery_rule>
-                    <name>Email Discovery</name>
+                    <name>Email discovery</name>
                     <type>EXTERNAL</type>
                     <key>ovh-api-get.py[&quot;{$OVH_API_CONF_NAME}&quot;,&quot;/email/domain&quot;,&quot;/email/domain/#loop#/account&quot;]</key>
                     <delay>10h</delay>
@@ -163,7 +163,7 @@ and {$OVH_EMAIL_IGNORE:&quot;{#ACCOUNT}@{#DOMAIN}&quot;}=0</expression>
                             <name>{#ACCOUNT}@{#DOMAIN} details</name>
                             <type>EXTERNAL</type>
                             <key>ovh-api-get.py[&quot;{$OVH_API_CONF_NAME}&quot;,&quot;/email/domain/{#DOMAIN}/account/{#ACCOUNT}/&quot;]</key>
-                            <delay>20m</delay>
+                            <delay>30m</delay>
                             <trends>0</trends>
                             <value_type>TEXT</value_type>
                             <application_prototypes>
@@ -182,7 +182,7 @@ and {$OVH_EMAIL_IGNORE:&quot;{#ACCOUNT}@{#DOMAIN}&quot;}=0</expression>
                             <name>{#ACCOUNT}@{#DOMAIN} space used</name>
                             <type>EXTERNAL</type>
                             <key>ovh-api-get.py[&quot;{$OVH_API_CONF_NAME}&quot;,&quot;/email/domain/{#DOMAIN}/account/{#ACCOUNT}/usage&quot;]</key>
-                            <delay>6h</delay>
+                            <delay>30m</delay>
                             <units>bytes</units>
                             <application_prototypes>
                                 <application_prototype>
@@ -193,10 +193,6 @@ and {$OVH_EMAIL_IGNORE:&quot;{#ACCOUNT}@{#DOMAIN}&quot;}=0</expression>
                                 <step>
                                     <type>JSONPATH</type>
                                     <params>$.quota</params>
-                                </step>
-                                <step>
-                                    <type>DISCARD_UNCHANGED_HEARTBEAT</type>
-                                    <params>1d</params>
                                 </step>
                             </preprocessing>
                         </item_prototype>
@@ -226,7 +222,7 @@ and {$OVH_EMAIL_IGNORE:&quot;{#ACCOUNT}@{#DOMAIN}&quot;}=0</expression>
                     </item_prototypes>
                     <trigger_prototypes>
                         <trigger_prototype>
-                            <expression>({Template Futur-Tech OVH API:ovh-api-get.py[&quot;{$OVH_API_CONF_NAME}&quot;,&quot;/email/domain/{#DOMAIN}/account/{#ACCOUNT}/usage&quot;].last()}/{Template Futur-Tech OVH API:email.domain.account.size[{#DOMAIN},{#ACCOUNT}].last()})*100&gt;85&#13;
+                            <expression>({Template Futur-Tech OVH API:ovh-api-get.py[&quot;{$OVH_API_CONF_NAME}&quot;,&quot;/email/domain/{#DOMAIN}/account/{#ACCOUNT}/usage&quot;].last()}/{Template Futur-Tech OVH API:email.domain.account.size[{#DOMAIN},{#ACCOUNT}].last()})*100&gt;95&#13;
 and {$OVH_EMAIL_IGNORE:&quot;{#ACCOUNT}@{#DOMAIN}&quot;}=0</expression>
                             <name>{#ACCOUNT}@{#DOMAIN} account is almost full</name>
                             <opdata>Used: {ITEM.LASTVALUE1} Available: {ITEM.LASTVALUE2}</opdata>
@@ -260,7 +256,7 @@ and {$OVH_EMAIL_IGNORE:&quot;{#ACCOUNT}@{#DOMAIN}&quot;}=0</expression>
                     </lld_macro_paths>
                 </discovery_rule>
                 <discovery_rule>
-                    <name>API Application Discovery</name>
+                    <name>API application discovery</name>
                     <type>EXTERNAL</type>
                     <key>ovh-api-get.py[&quot;{$OVH_API_CONF_NAME}&quot;,&quot;/me/api/application&quot;]</key>
                     <delay>5m</delay>
@@ -330,7 +326,7 @@ return output</params>
                     </preprocessing>
                 </discovery_rule>
                 <discovery_rule>
-                    <name>Telephony Discovery</name>
+                    <name>Telephony discovery</name>
                     <type>EXTERNAL</type>
                     <key>ovh-api-get.py[&quot;{$OVH_API_CONF_NAME}&quot;,&quot;/telephony&quot;,&quot;/telephony/#loop#/line&quot;]</key>
                     <delay>10h</delay>
@@ -379,18 +375,21 @@ return output</params>
                                     <params>0.001</params>
                                 </step>
                             </preprocessing>
-                            <trigger_prototypes>
-                                <trigger_prototype>
-                                    <expression>{now()}-{last()}&gt;{$OVH_TEL_REGISTRATION_WARN}</expression>
-                                    <name>{#ACCOUNT} - {#SERVICE} No telephony service registration in the last {$OVH_TEL_REGISTRATION_WARN}</name>
-                                    <opdata>Latest registration date: {ITEM.LASTVALUE1}</opdata>
-                                    <url>https://www.ovhtelecom.fr/manager/#/telephony/{#ACCOUNT}/line/{#SERVICE}/detailsOffer</url>
-                                    <priority>HIGH</priority>
-                                    <description>Registration of service is valid for max 1 hour.</description>
-                                </trigger_prototype>
-                            </trigger_prototypes>
                         </item_prototype>
                     </item_prototypes>
+                    <trigger_prototypes>
+                        <trigger_prototype>
+                            <expression>{Template Futur-Tech OVH API:ovh-api-get.py[&quot;{$OVH_API_CONF_NAME}&quot;,&quot;/telephony/{#ACCOUNT}/line/{#SERVICE}&quot;].now()}-{Template Futur-Tech OVH API:ovh-api-get.py[&quot;{$OVH_API_CONF_NAME}&quot;,&quot;/telephony/{#ACCOUNT}/line/{#SERVICE}/lastRegistrations&quot;].last()}&gt;{$OVH_TEL_REGISTRATION_WARN}</expression>
+                            <name>{#ACCOUNT} - {#SERVICE} No telephony service registration in the last {$OVH_TEL_REGISTRATION_WARN}</name>
+                            <opdata>Service Description: {ITEM.LASTVALUE1} Latest registration date: {ITEM.LASTVALUE2}</opdata>
+                            <url>https://www.ovhtelecom.fr/manager/#/telephony/{#ACCOUNT}/line/{#SERVICE}/detailsOffer</url>
+                            <priority>HIGH</priority>
+                            <description>This can be a false alarm! &#13;
+It has been observed that the data from the API and the current OVH console are sometimes not up-to-date concerning the registration date... Use the &quot;Manager v4&quot; from the menu on the left in order to access the old OVH Console to see if data are more up-to-date.&#13;
+&#13;
+Registration of service is valid for max 1 hour.</description>
+                        </trigger_prototype>
+                    </trigger_prototypes>
                     <lld_macro_paths>
                         <lld_macro_path>
                             <lld_macro>{#ACCOUNT}</lld_macro>
