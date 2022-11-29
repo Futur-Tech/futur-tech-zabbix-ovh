@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <zabbix_export>
     <version>5.0</version>
-    <date>2022-06-16T14:09:07Z</date>
+    <date>2022-11-29T12:31:47Z</date>
     <groups>
         <group>
             <name>Templates/Futur-Tech/Web</name>
@@ -160,6 +160,61 @@ and {$OVH_EMAIL_IGNORE:&quot;{#ACCOUNT}@{#DOMAIN}&quot;}=0</expression>
                             </master_item>
                         </item_prototype>
                         <item_prototype>
+                            <name>{#ACCOUNT}@{#DOMAIN} email count</name>
+                            <type>DEPENDENT</type>
+                            <key>email.domain.usage.count[{#DOMAIN},{#ACCOUNT}]</key>
+                            <delay>0</delay>
+                            <units>email(s)</units>
+                            <application_prototypes>
+                                <application_prototype>
+                                    <name>Domain {#DOMAIN} Emails</name>
+                                </application_prototype>
+                            </application_prototypes>
+                            <preprocessing>
+                                <step>
+                                    <type>JSONPATH</type>
+                                    <params>$.emailCount</params>
+                                </step>
+                            </preprocessing>
+                            <master_item>
+                                <key>ovh-api-get.py[&quot;{$OVH_API_CONF_NAME}&quot;,&quot;/email/domain/{#DOMAIN}/account/{#ACCOUNT}/usage&quot;]</key>
+                            </master_item>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <expression>{last()}&lt;&gt;0 &#13;
+and {min(3)}&lt;&gt;0&#13;
+and {$OVH_EMAIL_FETCHMAIL:&quot;{#ACCOUNT}@{#DOMAIN}&quot;}=1 &#13;
+and {$OVH_EMAIL_IGNORE:&quot;{#ACCOUNT}@{#DOMAIN}&quot;}=0</expression>
+                                    <name>{#ACCOUNT}@{#DOMAIN} account has mail not fetched</name>
+                                    <opdata>{ITEM.LASTVALUE1} found</opdata>
+                                    <url>https://www.ovh.com/manager/web/#/email_domain/{#DOMAIN}/email</url>
+                                    <priority>HIGH</priority>
+                                    <description>This email account has the macro OVH_EMAIL_FETCHMAIL set to 1. This means that this OVH email account should be kept empty automatically by Fetchmail.</description>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <name>{#ACCOUNT}@{#DOMAIN} space used</name>
+                            <type>DEPENDENT</type>
+                            <key>email.domain.usage.size[{#DOMAIN},{#ACCOUNT}]</key>
+                            <delay>0</delay>
+                            <units>bytes</units>
+                            <application_prototypes>
+                                <application_prototype>
+                                    <name>Domain {#DOMAIN} Emails</name>
+                                </application_prototype>
+                            </application_prototypes>
+                            <preprocessing>
+                                <step>
+                                    <type>JSONPATH</type>
+                                    <params>$.quota</params>
+                                </step>
+                            </preprocessing>
+                            <master_item>
+                                <key>ovh-api-get.py[&quot;{$OVH_API_CONF_NAME}&quot;,&quot;/email/domain/{#DOMAIN}/account/{#ACCOUNT}/usage&quot;]</key>
+                            </master_item>
+                        </item_prototype>
+                        <item_prototype>
                             <name>{#ACCOUNT}@{#DOMAIN} details</name>
                             <type>EXTERNAL</type>
                             <key>ovh-api-get.py[&quot;{$OVH_API_CONF_NAME}&quot;,&quot;/email/domain/{#DOMAIN}/account/{#ACCOUNT}/&quot;]</key>
@@ -179,11 +234,12 @@ and {$OVH_EMAIL_IGNORE:&quot;{#ACCOUNT}@{#DOMAIN}&quot;}=0</expression>
                             </preprocessing>
                         </item_prototype>
                         <item_prototype>
-                            <name>{#ACCOUNT}@{#DOMAIN} space used</name>
+                            <name>{#ACCOUNT}@{#DOMAIN} usage</name>
                             <type>EXTERNAL</type>
                             <key>ovh-api-get.py[&quot;{$OVH_API_CONF_NAME}&quot;,&quot;/email/domain/{#DOMAIN}/account/{#ACCOUNT}/usage&quot;]</key>
                             <delay>30m</delay>
-                            <units>bytes</units>
+                            <trends>0</trends>
+                            <value_type>TEXT</value_type>
                             <application_prototypes>
                                 <application_prototype>
                                     <name>Domain {#DOMAIN} Emails</name>
@@ -191,8 +247,8 @@ and {$OVH_EMAIL_IGNORE:&quot;{#ACCOUNT}@{#DOMAIN}&quot;}=0</expression>
                             </application_prototypes>
                             <preprocessing>
                                 <step>
-                                    <type>JSONPATH</type>
-                                    <params>$.quota</params>
+                                    <type>DISCARD_UNCHANGED_HEARTBEAT</type>
+                                    <params>1d</params>
                                 </step>
                             </preprocessing>
                         </item_prototype>
@@ -200,7 +256,7 @@ and {$OVH_EMAIL_IGNORE:&quot;{#ACCOUNT}@{#DOMAIN}&quot;}=0</expression>
                             <name>{#ACCOUNT}@{#DOMAIN} space update quota request</name>
                             <type>EXTERNAL</type>
                             <key>ovh-api-post.py[&quot;{$OVH_API_CONF_NAME}&quot;,&quot;/email/domain/{#DOMAIN}/account/{#ACCOUNT}/updateUsage&quot;]</key>
-                            <delay>16h</delay>
+                            <delay>4h</delay>
                             <trends>0</trends>
                             <value_type>TEXT</value_type>
                             <application_prototypes>
@@ -222,7 +278,7 @@ and {$OVH_EMAIL_IGNORE:&quot;{#ACCOUNT}@{#DOMAIN}&quot;}=0</expression>
                     </item_prototypes>
                     <trigger_prototypes>
                         <trigger_prototype>
-                            <expression>({Template Futur-Tech OVH API:ovh-api-get.py[&quot;{$OVH_API_CONF_NAME}&quot;,&quot;/email/domain/{#DOMAIN}/account/{#ACCOUNT}/usage&quot;].last()}/{Template Futur-Tech OVH API:email.domain.account.size[{#DOMAIN},{#ACCOUNT}].last()})*100&gt;95&#13;
+                            <expression>({Template Futur-Tech OVH API:email.domain.usage.size[{#DOMAIN},{#ACCOUNT}].last()}/{Template Futur-Tech OVH API:email.domain.account.size[{#DOMAIN},{#ACCOUNT}].last()})*100&gt;95&#13;
 and {$OVH_EMAIL_IGNORE:&quot;{#ACCOUNT}@{#DOMAIN}&quot;}=0</expression>
                             <name>{#ACCOUNT}@{#DOMAIN} account is almost full</name>
                             <opdata>Used: {ITEM.LASTVALUE1} Available: {ITEM.LASTVALUE2}</opdata>
@@ -230,13 +286,13 @@ and {$OVH_EMAIL_IGNORE:&quot;{#ACCOUNT}@{#DOMAIN}&quot;}=0</expression>
                             <dependencies>
                                 <dependency>
                                     <name>{#ACCOUNT}@{#DOMAIN} account is full</name>
-                                    <expression>({Template Futur-Tech OVH API:ovh-api-get.py[&quot;{$OVH_API_CONF_NAME}&quot;,&quot;/email/domain/{#DOMAIN}/account/{#ACCOUNT}/usage&quot;].last()}/{Template Futur-Tech OVH API:email.domain.account.size[{#DOMAIN},{#ACCOUNT}].last()})*100&gt;99&#13;
+                                    <expression>({Template Futur-Tech OVH API:email.domain.usage.size[{#DOMAIN},{#ACCOUNT}].last()}/{Template Futur-Tech OVH API:email.domain.account.size[{#DOMAIN},{#ACCOUNT}].last()})*100&gt;99&#13;
 and {$OVH_EMAIL_IGNORE:&quot;{#ACCOUNT}@{#DOMAIN}&quot;}=0</expression>
                                 </dependency>
                             </dependencies>
                         </trigger_prototype>
                         <trigger_prototype>
-                            <expression>({Template Futur-Tech OVH API:ovh-api-get.py[&quot;{$OVH_API_CONF_NAME}&quot;,&quot;/email/domain/{#DOMAIN}/account/{#ACCOUNT}/usage&quot;].last()}/{Template Futur-Tech OVH API:email.domain.account.size[{#DOMAIN},{#ACCOUNT}].last()})*100&gt;99&#13;
+                            <expression>({Template Futur-Tech OVH API:email.domain.usage.size[{#DOMAIN},{#ACCOUNT}].last()}/{Template Futur-Tech OVH API:email.domain.account.size[{#DOMAIN},{#ACCOUNT}].last()})*100&gt;99&#13;
 and {$OVH_EMAIL_IGNORE:&quot;{#ACCOUNT}@{#DOMAIN}&quot;}=0</expression>
                             <name>{#ACCOUNT}@{#DOMAIN} account is full</name>
                             <opdata>Used: {ITEM.LASTVALUE1} Available: {ITEM.LASTVALUE2}</opdata>
@@ -412,6 +468,16 @@ Registration of service is valid for max 1 hour.</description>
                     <macro>{$OVH_DNS_CHANGED_WARN}</macro>
                     <value>1d</value>
                     <description>Trigger if DNS zone was updated</description>
+                </macro>
+                <macro>
+                    <macro>{$OVH_EMAIL_FETCHMAIL}</macro>
+                    <value>0</value>
+                    <description>By default, email accounts are not mailfetched</description>
+                </macro>
+                <macro>
+                    <macro>{$OVH_EMAIL_FETCHMAIL:&quot;test@test.com&quot;}</macro>
+                    <value>1</value>
+                    <description>Exemple of macro to monitor a mailfetched account (account should be kept empty)</description>
                 </macro>
                 <macro>
                     <macro>{$OVH_EMAIL_IGNORE}</macro>
