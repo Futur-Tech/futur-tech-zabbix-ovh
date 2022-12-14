@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <zabbix_export>
     <version>5.0</version>
-    <date>2022-11-29T12:31:47Z</date>
+    <date>2022-12-14T14:24:19Z</date>
     <groups>
         <group>
             <name>Templates/Futur-Tech/Web</name>
@@ -127,7 +127,7 @@ return output</params>
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <expression>{last()}&lt;&gt;&quot;false&quot;&#13;
-and {$OVH_EMAIL_IGNORE:&quot;{#ACCOUNT}@{#DOMAIN}&quot;}=0</expression>
+and {$OVH_EMAIL_IGNORE:&quot;{#DOMAIN},{#ACCOUNT}&quot;}=0</expression>
                                     <name>{#ACCOUNT}@{#DOMAIN} account is blocked</name>
                                     <url>https://www.ovh.com/manager/web/#/email_domain/{#DOMAIN}/email</url>
                                     <priority>HIGH</priority>
@@ -181,10 +181,7 @@ and {$OVH_EMAIL_IGNORE:&quot;{#ACCOUNT}@{#DOMAIN}&quot;}=0</expression>
                             </master_item>
                             <trigger_prototypes>
                                 <trigger_prototype>
-                                    <expression>{last()}&lt;&gt;0 &#13;
-and {min(3)}&lt;&gt;0&#13;
-and {$OVH_EMAIL_FETCHMAIL:&quot;{#ACCOUNT}@{#DOMAIN}&quot;}=1 &#13;
-and {$OVH_EMAIL_IGNORE:&quot;{#ACCOUNT}@{#DOMAIN}&quot;}=0</expression>
+                                    <expression>{last()}&lt;&gt;0 and {min(#3)}&lt;&gt;0 and {$OVH_EMAIL_FETCHMAIL:&quot;{#DOMAIN},{#ACCOUNT}&quot;}=1 and {$OVH_EMAIL_IGNORE:&quot;{#DOMAIN},{#ACCOUNT}&quot;}=0</expression>
                                     <name>{#ACCOUNT}@{#DOMAIN} account has mail not fetched</name>
                                     <opdata>{ITEM.LASTVALUE1} found</opdata>
                                     <url>https://www.ovh.com/manager/web/#/email_domain/{#DOMAIN}/email</url>
@@ -256,7 +253,7 @@ and {$OVH_EMAIL_IGNORE:&quot;{#ACCOUNT}@{#DOMAIN}&quot;}=0</expression>
                             <name>{#ACCOUNT}@{#DOMAIN} space update quota request</name>
                             <type>EXTERNAL</type>
                             <key>ovh-api-post.py[&quot;{$OVH_API_CONF_NAME}&quot;,&quot;/email/domain/{#DOMAIN}/account/{#ACCOUNT}/updateUsage&quot;]</key>
-                            <delay>4h</delay>
+                            <delay>1h</delay>
                             <trends>0</trends>
                             <value_type>TEXT</value_type>
                             <application_prototypes>
@@ -279,7 +276,7 @@ and {$OVH_EMAIL_IGNORE:&quot;{#ACCOUNT}@{#DOMAIN}&quot;}=0</expression>
                     <trigger_prototypes>
                         <trigger_prototype>
                             <expression>({Template Futur-Tech OVH API:email.domain.usage.size[{#DOMAIN},{#ACCOUNT}].last()}/{Template Futur-Tech OVH API:email.domain.account.size[{#DOMAIN},{#ACCOUNT}].last()})*100&gt;95&#13;
-and {$OVH_EMAIL_IGNORE:&quot;{#ACCOUNT}@{#DOMAIN}&quot;}=0</expression>
+and {$OVH_EMAIL_IGNORE:&quot;{#DOMAIN},{#ACCOUNT}&quot;}=0</expression>
                             <name>{#ACCOUNT}@{#DOMAIN} account is almost full</name>
                             <opdata>Used: {ITEM.LASTVALUE1} Available: {ITEM.LASTVALUE2}</opdata>
                             <priority>AVERAGE</priority>
@@ -287,13 +284,13 @@ and {$OVH_EMAIL_IGNORE:&quot;{#ACCOUNT}@{#DOMAIN}&quot;}=0</expression>
                                 <dependency>
                                     <name>{#ACCOUNT}@{#DOMAIN} account is full</name>
                                     <expression>({Template Futur-Tech OVH API:email.domain.usage.size[{#DOMAIN},{#ACCOUNT}].last()}/{Template Futur-Tech OVH API:email.domain.account.size[{#DOMAIN},{#ACCOUNT}].last()})*100&gt;99&#13;
-and {$OVH_EMAIL_IGNORE:&quot;{#ACCOUNT}@{#DOMAIN}&quot;}=0</expression>
+and {$OVH_EMAIL_IGNORE:&quot;{#DOMAIN},{#ACCOUNT}&quot;}=0</expression>
                                 </dependency>
                             </dependencies>
                         </trigger_prototype>
                         <trigger_prototype>
                             <expression>({Template Futur-Tech OVH API:email.domain.usage.size[{#DOMAIN},{#ACCOUNT}].last()}/{Template Futur-Tech OVH API:email.domain.account.size[{#DOMAIN},{#ACCOUNT}].last()})*100&gt;99&#13;
-and {$OVH_EMAIL_IGNORE:&quot;{#ACCOUNT}@{#DOMAIN}&quot;}=0</expression>
+and {$OVH_EMAIL_IGNORE:&quot;{#DOMAIN},{#ACCOUNT}&quot;}=0</expression>
                             <name>{#ACCOUNT}@{#DOMAIN} account is full</name>
                             <opdata>Used: {ITEM.LASTVALUE1} Available: {ITEM.LASTVALUE2}</opdata>
                             <url>https://www.ovh.com/manager/web/#/email_domain/{#DOMAIN}/email</url>
@@ -475,9 +472,9 @@ Registration of service is valid for max 1 hour.</description>
                     <description>By default, email accounts are not mailfetched</description>
                 </macro>
                 <macro>
-                    <macro>{$OVH_EMAIL_FETCHMAIL:&quot;test@test.com&quot;}</macro>
+                    <macro>{$OVH_EMAIL_FETCHMAIL:&quot;domain.tld, user&quot;}</macro>
                     <value>1</value>
-                    <description>Exemple of macro to monitor a mailfetched account (account should be kept empty)</description>
+                    <description>Exemple of macro to monitor a mailfetched account (should be kept empty)</description>
                 </macro>
                 <macro>
                     <macro>{$OVH_EMAIL_IGNORE}</macro>
@@ -485,7 +482,7 @@ Registration of service is valid for max 1 hour.</description>
                     <description>By default, email accounts are monitored</description>
                 </macro>
                 <macro>
-                    <macro>{$OVH_EMAIL_IGNORE:&quot;test@test.com&quot;}</macro>
+                    <macro>{$OVH_EMAIL_IGNORE:&quot;domain.tld,user&quot;}</macro>
                     <value>1</value>
                     <description>Exemple of macro to ignore trigger for a specific email account.</description>
                 </macro>
