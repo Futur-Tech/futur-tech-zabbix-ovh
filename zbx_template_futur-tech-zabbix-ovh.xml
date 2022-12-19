@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <zabbix_export>
     <version>5.0</version>
-    <date>2022-12-14T14:24:19Z</date>
+    <date>2022-12-19T11:02:39Z</date>
     <groups>
         <group>
             <name>Templates/Futur-Tech/Web</name>
@@ -253,7 +253,7 @@ and {$OVH_EMAIL_IGNORE:&quot;{#DOMAIN},{#ACCOUNT}&quot;}=0</expression>
                             <name>{#ACCOUNT}@{#DOMAIN} space update quota request</name>
                             <type>EXTERNAL</type>
                             <key>ovh-api-post.py[&quot;{$OVH_API_CONF_NAME}&quot;,&quot;/email/domain/{#DOMAIN}/account/{#ACCOUNT}/updateUsage&quot;]</key>
-                            <delay>1h</delay>
+                            <delay>90m</delay>
                             <trends>0</trends>
                             <value_type>TEXT</value_type>
                             <application_prototypes>
