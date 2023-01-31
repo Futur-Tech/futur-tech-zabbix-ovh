@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <zabbix_export>
     <version>5.0</version>
-    <date>2022-12-19T11:02:39Z</date>
+    <date>2023-01-31T14:03:17Z</date>
     <groups>
         <group>
             <name>Templates/Futur-Tech/Web</name>
@@ -183,6 +183,26 @@ and {$OVH_EMAIL_IGNORE:&quot;{#DOMAIN},{#ACCOUNT}&quot;}=0</expression>
                                 <trigger_prototype>
                                     <expression>{last()}&lt;&gt;0 and {min(#3)}&lt;&gt;0 and {$OVH_EMAIL_FETCHMAIL:&quot;{#DOMAIN},{#ACCOUNT}&quot;}=1 and {$OVH_EMAIL_IGNORE:&quot;{#DOMAIN},{#ACCOUNT}&quot;}=0</expression>
                                     <name>{#ACCOUNT}@{#DOMAIN} account has mail not fetched</name>
+                                    <opdata>{ITEM.LASTVALUE1} found</opdata>
+                                    <url>https://www.ovh.com/manager/web/#/email_domain/{#DOMAIN}/email</url>
+                                    <priority>AVERAGE</priority>
+                                    <description>This email account has the macro OVH_EMAIL_FETCHMAIL set to 1. This means that this OVH email account should be kept empty automatically by Fetchmail.</description>
+                                    <dependencies>
+                                        <dependency>
+                                            <name>{#ACCOUNT}@{#DOMAIN} account has several mails not fetched</name>
+                                            <expression>{Template Futur-Tech OVH API:email.domain.usage.count[{#DOMAIN},{#ACCOUNT}].last()}&gt;1 &#13;
+and {Template Futur-Tech OVH API:email.domain.usage.count[{#DOMAIN},{#ACCOUNT}].min(#3)}&gt;1 &#13;
+and {$OVH_EMAIL_FETCHMAIL:&quot;{#DOMAIN},{#ACCOUNT}&quot;}=1 &#13;
+and {$OVH_EMAIL_IGNORE:&quot;{#DOMAIN},{#ACCOUNT}&quot;}=0</expression>
+                                        </dependency>
+                                    </dependencies>
+                                </trigger_prototype>
+                                <trigger_prototype>
+                                    <expression>{last()}&gt;1 &#13;
+and {min(#3)}&gt;1 &#13;
+and {$OVH_EMAIL_FETCHMAIL:&quot;{#DOMAIN},{#ACCOUNT}&quot;}=1 &#13;
+and {$OVH_EMAIL_IGNORE:&quot;{#DOMAIN},{#ACCOUNT}&quot;}=0</expression>
+                                    <name>{#ACCOUNT}@{#DOMAIN} account has several mails not fetched</name>
                                     <opdata>{ITEM.LASTVALUE1} found</opdata>
                                     <url>https://www.ovh.com/manager/web/#/email_domain/{#DOMAIN}/email</url>
                                     <priority>HIGH</priority>
