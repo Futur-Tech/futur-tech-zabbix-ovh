@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <zabbix_export>
     <version>5.0</version>
-    <date>2023-01-31T14:03:17Z</date>
+    <date>2023-05-22T09:14:10Z</date>
     <groups>
         <group>
             <name>Templates/Futur-Tech/Web</name>
@@ -283,12 +283,13 @@ and {$OVH_EMAIL_IGNORE:&quot;{#DOMAIN},{#ACCOUNT}&quot;}=0</expression>
                             </application_prototypes>
                             <trigger_prototypes>
                                 <trigger_prototype>
-                                    <expression>{last()}&lt;&gt;&quot;null&quot;</expression>
+                                    <expression>{last(#1)}&lt;&gt;&quot;null&quot; and {last(#2)}&lt;&gt;&quot;null&quot;</expression>
                                     <name>{#ACCOUNT}@{#DOMAIN} account space update request failed</name>
                                     <opdata>Latest update request output: {ITEM.LASTVALUE1}</opdata>
                                     <url>https://www.ovh.com/manager/web/#/email_domain/{#DOMAIN}/email</url>
                                     <priority>WARNING</priority>
-                                    <description>The returned value should be &quot;null&quot;</description>
+                                    <description>The returned value should be &quot;null&quot;.&#13;
+In order to avoid alerts when OVH API is momentarily down, the last 2 values are checked.</description>
                                 </trigger_prototype>
                             </trigger_prototypes>
                         </item_prototype>
@@ -478,7 +479,7 @@ Registration of service is valid for max 1 hour.</description>
             <macros>
                 <macro>
                     <macro>{$OVH_API_CONF_NAME}</macro>
-                    <value>default_api</value>
+                    <value>template_api</value>
                     <description>Name of the conf file which contains the API keys in /usr/local/etc/ (without the.conf)</description>
                 </macro>
                 <macro>

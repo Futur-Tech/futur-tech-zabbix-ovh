@@ -26,28 +26,27 @@ Works for Zabbix 5.x Server
     # This script will automatically pull the latest version of the branch ("main" in the example) and relaunch itself if a new version is found. Then it will run deploy.sh. Also note that any additional arguments given to this script will be passed to the deploy.sh script.
     ```
 
-1. Edit `/usr/local/etc/futur-tech-zabbix-ovh/default_api.conf` with your API key details
+1. Edit `/usr/local/etc/futur-tech-zabbix-ovh/template_api.conf` with your API key details
+1. Rename `template_api.conf` to `some_name.conf`
 1. Import the template XML in Zabbix Server
 1. Create a new host and link **Template Futur-Tech OVH API**  
-
+1. Override the macro `{$OVH_API_CONF_NAME}` with the conf file name (without the **.conf**)
 
 ## Multiple OVH Account Monitoring
-1. Duplicate conf file `/usr/local/etc/futur-tech-zabbix-ovh/default_api.conf`
-1. Rename it
-1. Create a new host in Zabbix Server and overide the macre {$OVH_API_CONF_NAME} with the conf file name (without the **.conf**)
+You can monitor several OVH API conf, create one Zabbix host for each.
 
 ## Testing OVH API
 From Zabbix Server you can test API calls
 
 ```bash
 ## This will list email domains
-/usr/lib/zabbix/externalscripts/ovh-api-get.py default_api /email/domain
+/usr/lib/zabbix/externalscripts/ovh-api-get.py template_api /email/domain
 
 ## This will return a JSON with all email accounts for each email domain
-/usr/lib/zabbix/externalscripts/ovh-api-get.py default_api /email/domain /email/domain/#loop#/account
+/usr/lib/zabbix/externalscripts/ovh-api-get.py template_api /email/domain /email/domain/#loop#/account
 
 ## Request quota update for email test@test.fr
-/usr/lib/zabbix/externalscripts/ovh-api-post.py default_api /email/domain/test.fr/account/test/updateUsage
+/usr/lib/zabbix/externalscripts/ovh-api-post.py template_api /email/domain/test.fr/account/test/updateUsage
 ```
 
 ## Note

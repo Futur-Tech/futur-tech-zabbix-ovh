@@ -25,7 +25,7 @@ mkdir_if_missing "${etc_dir}"
 
 $S_DIR/ft-util/ft_util_file-deploy "$S_DIR/bin/ovh-api-get.py" "${bin_dir}/ovh-api-get.py"
 $S_DIR/ft-util/ft_util_file-deploy "$S_DIR/bin/ovh-api-post.py" "${bin_dir}/ovh-api-post.py"
-$S_DIR/ft-util/ft_util_conf-update -s "$S_DIR/etc/default_api.conf" -d "${etc_dir}/" -r
+$S_DIR/ft-util/ft_util_conf-update -s "$S_DIR/etc/template_api.conf" -d "${etc_dir}/" -r
 
 echo "
   SETUP SUDOERS FILE
