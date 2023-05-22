@@ -17,6 +17,7 @@ echo "rm ${FT_UTIL_REPO}/ft_util_* done"
 download_file ft_util_bak-cleaner
 download_file ft_util_conf-update
 download_file ft_util_file-deploy
+download_file ft_util_inc_func
 download_file ft_util_inc_var
 download_file ft_util_log
 download_file ft_util_pkg

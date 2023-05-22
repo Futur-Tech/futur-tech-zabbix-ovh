@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 
 source "$(dirname "$0")/ft-util/ft_util_inc_var"
+source "$(dirname "$0")/ft-util/ft_util_inc_func"
 
-APP_NAME="futur-tech-zabbix-ovh"
-REQUIRED_PKG_ARR=( "python3" "python3-pip" )
+app_name="futur-tech-zabbix-ovh"
+required_pkg_arr=("python3" "python3-pip")
 
-BIN_DIR="/usr/lib/zabbix/externalscripts"
-ETC_DIR="/usr/local/etc/${APP_NAME}"
-SRC_DIR="/usr/local/src/${APP_NAME}"
-SUDOERS_ETC="/etc/sudoers.d/${APP_NAME}"
+bin_dir="/usr/lib/zabbix/externalscripts"
+etc_dir="/usr/local/etc/${app_name}"
+src_dir="/usr/local/src/${app_name}"
+sudoers_etc="/etc/sudoers.d/${app_name}"
 
 $S_LOG -d $S_NAME "Start $S_DIR_NAME/$S_NAME $*"
 
@@ -16,30 +17,27 @@ echo "
   INSTALL NEEDED PACKAGES & FILES
 ------------------------------------------"
 
-$S_DIR_PATH/ft-util/ft_util_pkg -u -i ${REQUIRED_PKG_ARR[@]} || exit 1
- 
-pip3 install ovh | $S_LOG -d "$S_NAME" -d "pip3 install ovh" -i 
-$S_LOG -s $? -d $S_NAME "Installing Python3 OVH returned EXIT_CODE=$?"
+$S_DIR_PATH/ft-util/ft_util_pkg -u -i ${required_pkg_arr[@]} || exit 1
 
-if [ ! -d "${ETC_DIR}" ] ; then mkdir "${ETC_DIR}" ; $S_LOG -s $? -d $S_NAME "Creating ${ETC_DIR} returned EXIT_CODE=$?" ; fi
+run_cmd_log pip3 install ovh
 
-$S_DIR/ft-util/ft_util_file-deploy "$S_DIR/bin/ovh-api-get.py" "${BIN_DIR}/ovh-api-get.py"
-$S_DIR/ft-util/ft_util_file-deploy "$S_DIR/bin/ovh-api-post.py" "${BIN_DIR}/ovh-api-post.py"
-$S_DIR/ft-util/ft_util_conf-update -s "$S_DIR/etc/default_api.conf" -d "${ETC_DIR}/" -r
+mkdir_if_missing "${etc_dir}"
+
+$S_DIR/ft-util/ft_util_file-deploy "$S_DIR/bin/ovh-api-get.py" "${bin_dir}/ovh-api-get.py"
+$S_DIR/ft-util/ft_util_file-deploy "$S_DIR/bin/ovh-api-post.py" "${bin_dir}/ovh-api-post.py"
+$S_DIR/ft-util/ft_util_conf-update -s "$S_DIR/etc/default_api.conf" -d "${etc_dir}/" -r
 
 echo "
   SETUP SUDOERS FILE
 ------------------------------------------"
 
-$S_LOG -d $S_NAME -d "$SUDOERS_ETC" "==============================="
+$S_LOG -d $S_NAME -d "$sudoers_etc" "==============================="
 
-echo "Defaults:zabbix !requiretty" | sudo EDITOR='tee' visudo --file=$SUDOERS_ETC &>/dev/null
-echo "zabbix ALL=(ALL) NOPASSWD:${SRC_DIR}/deploy-update.sh" | sudo EDITOR='tee -a' visudo --file=$SUDOERS_ETC &>/dev/null
+echo "Defaults:zabbix !requiretty" | sudo EDITOR='tee' visudo --file=$sudoers_etc &>/dev/null
+echo "zabbix ALL=(ALL) NOPASSWD:${src_dir}/deploy-update.sh" | sudo EDITOR='tee -a' visudo --file=$sudoers_etc &>/dev/null
 
-cat $SUDOERS_ETC | $S_LOG -d "$S_NAME" -d "$SUDOERS_ETC" -i 
+cat $sudoers_etc | $S_LOG -d "$S_NAME" -d "$sudoers_etc" -i
 
-$S_LOG -d $S_NAME -d "$SUDOERS_ETC" "==============================="
-
-$S_LOG -d "$S_NAME" "End $S_NAME"
+$S_LOG -d $S_NAME -d "$sudoers_etc" "==============================="
 
 exit

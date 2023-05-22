@@ -1,6 +1,11 @@
 #!/bin/bash
 
+# Config File Updater Script v1.1 (2021-02-21) Guilaume Hullin
+#Note: comments on the same lines of a variable set in a target conf will be kept inside the target file
+
 source "$(dirname "$0")/ft_util_inc_var"
+
+# $S_LOG -d $S_NAME "Start $S_NAME $*"
 
 usage() {
     echo "Usage: $0 \
@@ -14,22 +19,22 @@ usage() {
 while getopts "yrs:d:" o; do
     case "${o}" in
     s)
-        source_conf="${OPTARG}"
-        if [ ! -f "$source_conf" ]; then
-            echo "$source_conf not a file."
+        SOURCE_CONF="${OPTARG}"
+        if [ ! -f "$SOURCE_CONF" ]; then
+            echo "$SOURCE_CONF not a file."
             usage
         fi
         ;;
 
     d)
-        dest_conf="${OPTARG}"
+        DEST_CONF="${OPTARG}"
         ;;
 
     r)
-        recursive=true
+        RECURSIVE=true
         ;;
     y)
-        dry_run=true
+        DRY_RUN=true
         ;;
 
     : | *)
@@ -39,9 +44,15 @@ while getopts "yrs:d:" o; do
 done
 shift "$((OPTIND - 1))"
 
-if [ -z "$source_conf" ] || [ -z "$dest_conf" ]; then usage; fi
+if [ -z "$SOURCE_CONF" ] || [ -z "$DEST_CONF" ]; then usage; fi
 
 conf_update() {
+
+    # Regex match example "export SSH_USER=root"
+    ## Group 1: "export "
+    ## Group 2: "SSH_USER"
+    ## Group 3: "root"
+    regex="(.*\ )([a-zA-Z_][a-zA-Z_0-9]*)=(.*)"
 
     local sourceFile="$1"
     local targetFile="$2"
@@ -57,42 +68,16 @@ conf_update() {
     arrFiles+=([search]=$targetFile [replace]=$sourceFile)
 
     for step in "${arrSteps[@]}"; do
-        # empty the target file
-        if [ "$step" = "replace" ]; then [[ $dry_run ]] || >"$targetFile"; fi
+        if [ "$step" = "replace" ]; then [[ $DRY_RUN ]] || >"$targetFile"; fi # empty the target file
 
-        # if search we loop throught the target
-        # if replace we loop throught the source
         while IFS="" read -r line || [ -n "$line" ]; do
-            # for debug
-            # echo "$line"
+            if [[ "$line" =~ \#$regex ]]; then # matching commented line with "variable=value" inside
+                if [ "$step" = "replace" ]; then [[ $DRY_RUN ]] || printf '%s\n' "$line" >>"$targetFile"; fi
+            elif [[ "$line" =~ $regex ]]; then
 
-            # Regex match example "export SSH_USER=root"
-            ## Group 1: "export "
-            ## Group 2: "SSH_USER"
-            ## Group 3: "root"
-            if [[ "$line" =~ ^([a-zA-Z_0-9]*\ )?([a-zA-Z_]+[a-zA-Z_0-9]*)=(.*) ]]; then
-
-                # for debug
-                # echo "step:$step file:${arrFiles[$step]} group1:${BASH_REMATCH[1]} group2:${BASH_REMATCH[2]} group3:${BASH_REMATCH[3]}"
-
-                # if search step then store pair into array
                 if [ "$step" = "search" ]; then arrConf[${BASH_REMATCH[2]}]=${BASH_REMATCH[3]}; fi
-
                 if [ "$step" = "replace" ]; then
-                    #check if variable name is in the array
-                    if [ -n "${arrConf[${BASH_REMATCH[2]}]}" ] &&
-                        [ "$recursive" = true ] && [ "${sourceFile##*/}" = "${targetFile##*/}" ]; then # This part of the IF statement is to force default value inside "template file" (when on recursive mode)
-
-                        VALUE=${BASH_REMATCH[3]}
-                        if [ "${arrConf[${BASH_REMATCH[2]}]}" != "${BASH_REMATCH[3]}" ]; then
-                            VALUE=${BASH_REMATCH[3]}
-                            $S_LOG -s warn -d $S_NAME -d "$targetFile" "(Template) Default: ${BASH_REMATCH[2]}=$VALUE"
-                        else
-                            $S_LOG -s debug -d $S_NAME -d "$targetFile" "(Template) Kept: ${BASH_REMATCH[2]}=$VALUE"
-                            unset arrConf[${BASH_REMATCH[2]}]
-                        fi
-
-                    elif [ -n "${arrConf[${BASH_REMATCH[2]}]}" ]; then
+                    if [ -n "${arrConf[${BASH_REMATCH[2]}]}" ]; then #check if variable name is in the array
                         VALUE=${arrConf[${BASH_REMATCH[2]}]}
                         $S_LOG -s debug -d $S_NAME -d "$targetFile" "Kept: ${BASH_REMATCH[2]}=$VALUE"
                         unset arrConf[${BASH_REMATCH[2]}]
@@ -100,10 +85,10 @@ conf_update() {
                         VALUE=${BASH_REMATCH[3]}
                         $S_LOG -s warn -d $S_NAME -d "$targetFile" "Default: ${BASH_REMATCH[2]}=$VALUE"
                     fi
-                    [[ $dry_run ]] || printf '%s\n' "${BASH_REMATCH[1]}${BASH_REMATCH[2]}=$VALUE" >>"$targetFile"
+                    [[ $DRY_RUN ]] || printf '%s\n' "${BASH_REMATCH[1]}${BASH_REMATCH[2]}=$VALUE" >>"$targetFile"
                 fi
             else
-                if [ "$step" = "replace" ]; then [[ $dry_run ]] || printf '%s\n' "$line" >>"$targetFile"; fi
+                if [ "$step" = "replace" ]; then [[ $DRY_RUN ]] || printf '%s\n' "$line" >>"$targetFile"; fi
             fi
         done <${arrFiles[$step]}
     done
@@ -117,45 +102,51 @@ conf_update() {
 }
 
 conf_create() {
-    if [[ $dry_run ]]; then
-        $S_LOG -s $? -d $S_NAME "Copy new $source_conf ----> $dest_conf"
+    if [[ $DRY_RUN ]]; then
+        $S_LOG -s $? -d $S_NAME "Copy new $SOURCE_CONF ----> $DEST_CONF"
     else
-        mkdir -p "$(dirname "$dest_conf")" && cp "$source_conf" "$dest_conf"
-        $S_LOG -s $? -d $S_NAME "Copy new $source_conf ----> $dest_conf"
+        mkdir -p "$(dirname "$DEST_CONF")" && cp "$SOURCE_CONF" "$DEST_CONF"
+        $S_LOG -s $? -d $S_NAME "Copy new $SOURCE_CONF ----> $DEST_CONF"
     fi
 }
 
-if [ "$recursive" = true ]; then
-    if [ -d "$dest_conf" ]; then
-        $S_LOG -d $S_NAME -d "$dest_conf" "Looping throught files in folder"
-        for file in ${dest_conf%/}/*; do
+if [ "$RECURSIVE" = true ]; then
+    if [ -d "$DEST_CONF" ]; then
+        $S_LOG -d $S_NAME -d "$DEST_CONF" "Looping throught files in folder"
+        for file in ${DEST_CONF%/}/*; do
             [ -f "$file" ] || break
-            [ "${file##*.}" = "${source_conf##*.}" ] || continue # only process files with the same ext than the source
+            [ "${file##*.}" = "${SOURCE_CONF##*.}" ] || continue # only process files with the same ext than the source
+
+            $S_LOG -d $S_NAME -d "$file" "========================"
 
             $S_LOG -s debug -d $S_NAME -d "$file" "Create backup of file $file"
-            [[ $dry_run ]] || cp "$file" "$file.$(date +\%Y\%m\%d\-\%H\%M\%S).bak"
+            [[ $DRY_RUN ]] || cp "$file" "$file.$(date +\%Y\%m\%d\-\%H\%M\%S).bak"
 
-            conf_update "$source_conf" "$file"
+            conf_update "$SOURCE_CONF" "$file"
+
+            $S_LOG -d $S_NAME -d "$file" "========================"
 
         done
-        if [ -z "$(ls -A ${dest_conf})" ]; then
+        if [ -z "$(ls -A ${DEST_CONF})" ]; then
             conf_create
         else
-            [[ $dry_run ]] || $S_DIR_PATH/ft_util_bak-cleaner "${dest_conf%/}/"
+            [[ $DRY_RUN ]] || $S_DIR_PATH/ft_util_bak-cleaner "${DEST_CONF%/}/"
         fi
 
     else
         conf_create
     fi
 else
-    if [ -f "$dest_conf" ]; then
-        $S_LOG -s debug -d $S_NAME -d "$dest_conf" "Create backup of file $dest_conf"
-        [[ $dry_run ]] || cp "$dest_conf" "$dest_conf.$(date +\%Y\%m\%d\-\%H\%M\%S).bak"
+    if [ -f "$DEST_CONF" ]; then
+        $S_LOG -d $S_NAME -d "$DEST_CONF" "Create backup of file $DEST_CONF"
+        [[ $DRY_RUN ]] || cp "$DEST_CONF" "$DEST_CONF.$(date +\%Y\%m\%d\-\%H\%M\%S).bak"
 
-        conf_update "$source_conf" "$dest_conf"
+        conf_update "$SOURCE_CONF" "$DEST_CONF"
 
-        [[ $dry_run ]] || $S_DIR_PATH/ft_util_bak-cleaner "$(readlink -f "$dest_conf")"
+        [[ $DRY_RUN ]] || $S_DIR_PATH/ft_util_bak-cleaner "$(readlink -f "$DEST_CONF")"
     else
         conf_create
     fi
 fi
+
+$S_LOG -d $S_NAME "End $S_NAME $*"
