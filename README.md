@@ -1,7 +1,7 @@
 # OVH Monitoring with Zabbix
 Monitoring of OVH account (domains, emails etc...)
 
-Works for Zabbix 5.x Server
+Works for Zabbix 6.0 Server
 
 ## What it does
 - Monitoring of Domain Names

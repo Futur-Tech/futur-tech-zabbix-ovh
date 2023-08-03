@@ -1,0 +1,386 @@
+zabbix_export:
+  version: '6.0'
+  date: '2023-08-03T16:23:58Z'
+  groups:
+    - uuid: b4e4123eaf014664a0128bf27577fed9
+      name: Templates/Futur-Tech/Web
+  templates:
+    - uuid: 03bcdf41f75640dfb62a37521dbf0adf
+      template: 'Futur-Tech OVH API'
+      name: 'Futur-Tech OVH API'
+      description: 'https://github.com/Futur-Tech/futur-tech-zabbix-ovh'
+      groups:
+        - name: Templates/Futur-Tech/Web
+      discovery_rules:
+        - uuid: d3f89786925743249c55679d95c00a66
+          name: 'Domain discovery'
+          type: EXTERNAL
+          key: 'ovh-api-get.py["{$OVH_API_CONF_NAME}","/domain/zone"]'
+          delay: 10h
+          item_prototypes:
+            - uuid: 3002f764d19442ca9bcbe9069c77591d
+              name: '{#DOMAIN} zone DNS last update'
+              type: EXTERNAL
+              key: 'ovh-api-get.py["{$OVH_API_CONF_NAME}","/domain/zone/{#DOMAIN}"]'
+              delay: 30m
+              units: unixtime
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - $.lastUpdate
+                - type: JAVASCRIPT
+                  parameters:
+                    - 'return Date.parse(value)'
+                - type: MULTIPLIER
+                  parameters:
+                    - '0.001'
+              tags:
+                - tag: Application
+                  value: 'Domain {#DOMAIN} DNS'
+              trigger_prototypes:
+                - uuid: 782fedda1c9e4dd596791f9250210a3a
+                  expression: 'now()-last(/Futur-Tech OVH API/ovh-api-get.py["{$OVH_API_CONF_NAME}","/domain/zone/{#DOMAIN}"])<{$OVH_DNS_CHANGED_WARN}'
+                  name: '{#DOMAIN} zone DNS has been updated in the last {$OVH_DNS_CHANGED_WARN}'
+                  opdata: 'Update date: {ITEM.LASTVALUE1}'
+                  url: 'https://www.ovh.com/manager/web/#/domain/{#DOMAIN}/information'
+                  priority: WARNING
+          lld_macro_paths:
+            - lld_macro: '{#DOMAIN}'
+              path: $.discovery
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - |
+                  //Convert array into a discovery-ready JSON object
+                  // https://www.zabbix.com/forum/zabbix-help/419391-utilizing-jsonpath-to-setup-an-lld-macros
+                  var array = JSON.parse(value)
+                  var len = array.length;
+                  var x = 0
+                  output = "{ \"data\" :["
+                  for (; x < len - 1; x++){
+                  output += "{\"discovery\": \"" + array[x] + "\"},"
+                  }
+                  output += "{\"discovery\": \"" + array[x] + "\"}"
+                  output += "]}"
+                  return output
+            - type: JSONPATH
+              parameters:
+                - $.data
+        - uuid: 465430de0ed54af6abe35c4e58c2429b
+          name: 'Email discovery'
+          type: EXTERNAL
+          key: 'ovh-api-get.py["{$OVH_API_CONF_NAME}","/email/domain","/email/domain/#loop#/account"]'
+          delay: 10h
+          item_prototypes:
+            - uuid: 526e6b4076e944b09aa41fd206ae7563
+              name: '{#ACCOUNT}@{#DOMAIN} is blocked'
+              type: DEPENDENT
+              key: 'email.domain.account.isblocked[{#DOMAIN},{#ACCOUNT}]'
+              delay: '0'
+              trends: '0'
+              value_type: TEXT
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - $.isBlocked
+                - type: DISCARD_UNCHANGED_HEARTBEAT
+                  parameters:
+                    - 1d
+              master_item:
+                key: 'ovh-api-get.py["{$OVH_API_CONF_NAME}","/email/domain/{#DOMAIN}/account/{#ACCOUNT}/"]'
+              tags:
+                - tag: Application
+                  value: 'Domain {#DOMAIN} Emails'
+              trigger_prototypes:
+                - uuid: 00b17cc2bcc046c5be5a3acf43690792
+                  expression: |
+                    last(/Futur-Tech OVH API/email.domain.account.isblocked[{#DOMAIN},{#ACCOUNT}])<>"false"
+                    and {$OVH_EMAIL_IGNORE:"{#DOMAIN},{#ACCOUNT}"}=0
+                  name: '{#ACCOUNT}@{#DOMAIN} account is blocked'
+                  url: 'https://www.ovh.com/manager/web/#/email_domain/{#DOMAIN}/email'
+                  priority: HIGH
+            - uuid: e5ff90a232ca441bb9bfe6024fb7597c
+              name: '{#ACCOUNT}@{#DOMAIN} space available'
+              type: DEPENDENT
+              key: 'email.domain.account.size[{#DOMAIN},{#ACCOUNT}]'
+              delay: '0'
+              units: bytes
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - $.size
+                - type: DISCARD_UNCHANGED_HEARTBEAT
+                  parameters:
+                    - 1d
+              master_item:
+                key: 'ovh-api-get.py["{$OVH_API_CONF_NAME}","/email/domain/{#DOMAIN}/account/{#ACCOUNT}/"]'
+              tags:
+                - tag: Application
+                  value: 'Domain {#DOMAIN} Emails'
+            - uuid: 03add05163b544f1a7901b62b10fbc32
+              name: '{#ACCOUNT}@{#DOMAIN} email count'
+              type: DEPENDENT
+              key: 'email.domain.usage.count[{#DOMAIN},{#ACCOUNT}]'
+              delay: '0'
+              units: email(s)
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - $.emailCount
+              master_item:
+                key: 'ovh-api-get.py["{$OVH_API_CONF_NAME}","/email/domain/{#DOMAIN}/account/{#ACCOUNT}/usage"]'
+              tags:
+                - tag: Application
+                  value: 'Domain {#DOMAIN} Emails'
+              trigger_prototypes:
+                - uuid: 4edc967e437942939a018cbf504031c4
+                  expression: 'last(/Futur-Tech OVH API/email.domain.usage.count[{#DOMAIN},{#ACCOUNT}])<>0 and min(/Futur-Tech OVH API/email.domain.usage.count[{#DOMAIN},{#ACCOUNT}],#3)<>0 and {$OVH_EMAIL_FETCHMAIL:"{#DOMAIN},{#ACCOUNT}"}=1 and {$OVH_EMAIL_IGNORE:"{#DOMAIN},{#ACCOUNT}"}=0'
+                  name: '{#ACCOUNT}@{#DOMAIN} account has mail not fetched'
+                  opdata: '{ITEM.LASTVALUE1} found'
+                  url: 'https://www.ovh.com/manager/web/#/email_domain/{#DOMAIN}/email'
+                  priority: AVERAGE
+                  description: 'This email account has the macro OVH_EMAIL_FETCHMAIL set to 1. This means that this OVH email account should be kept empty automatically by Fetchmail.'
+                  dependencies:
+                    - name: '{#ACCOUNT}@{#DOMAIN} account has several mails not fetched'
+                      expression: |
+                        last(/Futur-Tech OVH API/email.domain.usage.count[{#DOMAIN},{#ACCOUNT}])>1 
+                        and min(/Futur-Tech OVH API/email.domain.usage.count[{#DOMAIN},{#ACCOUNT}],#3)>1 
+                        and {$OVH_EMAIL_FETCHMAIL:"{#DOMAIN},{#ACCOUNT}"}=1 
+                        and {$OVH_EMAIL_IGNORE:"{#DOMAIN},{#ACCOUNT}"}=0
+                - uuid: 36c72d1246a346eba4ef86935a186a42
+                  expression: |
+                    last(/Futur-Tech OVH API/email.domain.usage.count[{#DOMAIN},{#ACCOUNT}])>1 
+                    and min(/Futur-Tech OVH API/email.domain.usage.count[{#DOMAIN},{#ACCOUNT}],#3)>1 
+                    and {$OVH_EMAIL_FETCHMAIL:"{#DOMAIN},{#ACCOUNT}"}=1 
+                    and {$OVH_EMAIL_IGNORE:"{#DOMAIN},{#ACCOUNT}"}=0
+                  name: '{#ACCOUNT}@{#DOMAIN} account has several mails not fetched'
+                  opdata: '{ITEM.LASTVALUE1} found'
+                  url: 'https://www.ovh.com/manager/web/#/email_domain/{#DOMAIN}/email'
+                  priority: HIGH
+                  description: 'This email account has the macro OVH_EMAIL_FETCHMAIL set to 1. This means that this OVH email account should be kept empty automatically by Fetchmail.'
+            - uuid: c432e96670bc4a6ca9fca691c6ffe3be
+              name: '{#ACCOUNT}@{#DOMAIN} space used'
+              type: DEPENDENT
+              key: 'email.domain.usage.size[{#DOMAIN},{#ACCOUNT}]'
+              delay: '0'
+              units: bytes
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - $.quota
+              master_item:
+                key: 'ovh-api-get.py["{$OVH_API_CONF_NAME}","/email/domain/{#DOMAIN}/account/{#ACCOUNT}/usage"]'
+              tags:
+                - tag: Application
+                  value: 'Domain {#DOMAIN} Emails'
+            - uuid: a22a965127c14962ac2a547d3c837f31
+              name: '{#ACCOUNT}@{#DOMAIN} details'
+              type: EXTERNAL
+              key: 'ovh-api-get.py["{$OVH_API_CONF_NAME}","/email/domain/{#DOMAIN}/account/{#ACCOUNT}/"]'
+              delay: 30m
+              trends: '0'
+              value_type: TEXT
+              preprocessing:
+                - type: DISCARD_UNCHANGED_HEARTBEAT
+                  parameters:
+                    - 1d
+              tags:
+                - tag: Application
+                  value: 'Domain {#DOMAIN} Emails'
+            - uuid: d7967a26cc724305811a24d02c22771b
+              name: '{#ACCOUNT}@{#DOMAIN} usage'
+              type: EXTERNAL
+              key: 'ovh-api-get.py["{$OVH_API_CONF_NAME}","/email/domain/{#DOMAIN}/account/{#ACCOUNT}/usage"]'
+              delay: 30m
+              trends: '0'
+              value_type: TEXT
+              preprocessing:
+                - type: DISCARD_UNCHANGED_HEARTBEAT
+                  parameters:
+                    - 1d
+              tags:
+                - tag: Application
+                  value: 'Domain {#DOMAIN} Emails'
+            - uuid: 60c6fd1849d649339fb5ab271a445ea1
+              name: '{#ACCOUNT}@{#DOMAIN} space update quota request'
+              type: EXTERNAL
+              key: 'ovh-api-post.py["{$OVH_API_CONF_NAME}","/email/domain/{#DOMAIN}/account/{#ACCOUNT}/updateUsage"]'
+              delay: 90m
+              trends: '0'
+              value_type: TEXT
+              tags:
+                - tag: Application
+                  value: 'Domain {#DOMAIN} Emails'
+              trigger_prototypes:
+                - uuid: 1dbd5c3fcdab4231800acbeba28150ff
+                  expression: 'last(/Futur-Tech OVH API/ovh-api-post.py["{$OVH_API_CONF_NAME}","/email/domain/{#DOMAIN}/account/{#ACCOUNT}/updateUsage"],#1)<>"null" and last(/Futur-Tech OVH API/ovh-api-post.py["{$OVH_API_CONF_NAME}","/email/domain/{#DOMAIN}/account/{#ACCOUNT}/updateUsage"],#2)<>"null"'
+                  name: '{#ACCOUNT}@{#DOMAIN} account space update request failed'
+                  opdata: 'Latest update request output: {ITEM.LASTVALUE1}'
+                  url: 'https://www.ovh.com/manager/web/#/email_domain/{#DOMAIN}/email'
+                  priority: WARNING
+                  description: |
+                    The returned value should be "null".
+                    In order to avoid alerts when OVH API is momentarily down, the last 2 values are checked.
+          trigger_prototypes:
+            - uuid: f47f4edf45db42bea87777a3652bd5d6
+              expression: |
+                (last(/Futur-Tech OVH API/email.domain.usage.size[{#DOMAIN},{#ACCOUNT}])/last(/Futur-Tech OVH API/email.domain.account.size[{#DOMAIN},{#ACCOUNT}]))*100>95
+                and {$OVH_EMAIL_IGNORE:"{#DOMAIN},{#ACCOUNT}"}=0
+              name: '{#ACCOUNT}@{#DOMAIN} account is almost full'
+              opdata: 'Used: {ITEM.LASTVALUE1} Available: {ITEM.LASTVALUE2}'
+              priority: AVERAGE
+              dependencies:
+                - name: '{#ACCOUNT}@{#DOMAIN} account is full'
+                  expression: |
+                    (last(/Futur-Tech OVH API/email.domain.usage.size[{#DOMAIN},{#ACCOUNT}])/last(/Futur-Tech OVH API/email.domain.account.size[{#DOMAIN},{#ACCOUNT}]))*100>99
+                    and {$OVH_EMAIL_IGNORE:"{#DOMAIN},{#ACCOUNT}"}=0
+            - uuid: fd63864c905d409596a12cae35d34d28
+              expression: |
+                (last(/Futur-Tech OVH API/email.domain.usage.size[{#DOMAIN},{#ACCOUNT}])/last(/Futur-Tech OVH API/email.domain.account.size[{#DOMAIN},{#ACCOUNT}]))*100>99
+                and {$OVH_EMAIL_IGNORE:"{#DOMAIN},{#ACCOUNT}"}=0
+              name: '{#ACCOUNT}@{#DOMAIN} account is full'
+              opdata: 'Used: {ITEM.LASTVALUE1} Available: {ITEM.LASTVALUE2}'
+              url: 'https://www.ovh.com/manager/web/#/email_domain/{#DOMAIN}/email'
+              priority: HIGH
+          lld_macro_paths:
+            - lld_macro: '{#ACCOUNT}'
+              path: $.loop_result
+            - lld_macro: '{#DOMAIN}'
+              path: $.source_result
+        - uuid: 03ee830431fb49e0a43e786b526014ff
+          name: 'API application discovery'
+          type: EXTERNAL
+          key: 'ovh-api-get.py["{$OVH_API_CONF_NAME}","/me/api/application"]'
+          delay: 5m
+          item_prototypes:
+            - uuid: 2132435ceaf241608f2dbc9be8f556d4
+              name: 'API application {#APP_ID} name'
+              type: EXTERNAL
+              key: 'ovh-api-get.py["{$OVH_API_CONF_NAME}","/me/api/application/{#APP_ID}"]'
+              delay: 15m
+              trends: '0'
+              value_type: TEXT
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - $.name
+                - type: DISCARD_UNCHANGED_HEARTBEAT
+                  parameters:
+                    - 2h
+              tags:
+                - tag: Application
+                  value: 'API Keys'
+              trigger_prototypes:
+                - uuid: 5ab3fb69b1d54b31885a8ab56d386c0a
+                  expression: 'count(/Futur-Tech OVH API/ovh-api-get.py["{$OVH_API_CONF_NAME}","/me/api/application/{#APP_ID}"],#2)<2'
+                  recovery_mode: NONE
+                  name: 'New OVH API Key discovered'
+                  opdata: 'Application Name: {ITEM.LASTVALUE1} ApplicationId: {#APP_ID}'
+                  url: 'https://api.ovh.com/console/?#/me/api/application/%7BapplicationId%7D#GET'
+                  priority: HIGH
+                  description: 'An new OVH API application has been registered in the OVH Account. This trigger need to be closed manually.'
+                  manual_close: 'YES'
+          lld_macro_paths:
+            - lld_macro: '{#APP_ID}'
+              path: $.discovery
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - |
+                  //Convert array into a discovery-ready JSON object
+                  // https://www.zabbix.com/forum/zabbix-help/419391-utilizing-jsonpath-to-setup-an-lld-macros
+                  var array = JSON.parse(value)
+                  var len = array.length;
+                  var x = 0
+                  output = "{ \"data\" :["
+                  for (; x < len - 1; x++){
+                  output += "{\"discovery\": \"" + array[x] + "\"},"
+                  }
+                  output += "{\"discovery\": \"" + array[x] + "\"}"
+                  output += "]}"
+                  return output
+            - type: JSONPATH
+              parameters:
+                - $.data
+        - uuid: 5b86856641704d559985d917df932fe6
+          name: 'Telephony discovery'
+          type: EXTERNAL
+          key: 'ovh-api-get.py["{$OVH_API_CONF_NAME}","/telephony","/telephony/#loop#/line"]'
+          delay: 10h
+          item_prototypes:
+            - uuid: 138fcd14c9a544e986f03716090f1083
+              name: '{#ACCOUNT} - {#SERVICE} telephony service description'
+              type: EXTERNAL
+              key: 'ovh-api-get.py["{$OVH_API_CONF_NAME}","/telephony/{#ACCOUNT}/line/{#SERVICE}"]'
+              delay: 20m
+              trends: '0'
+              value_type: TEXT
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - $.description
+              tags:
+                - tag: Application
+                  value: 'Telephony {#ACCOUNT}'
+            - uuid: 634f504c9656428987ecec19e2b82558
+              name: '{#ACCOUNT} - {#SERVICE} telephony service latest registration'
+              type: EXTERNAL
+              key: 'ovh-api-get.py["{$OVH_API_CONF_NAME}","/telephony/{#ACCOUNT}/line/{#SERVICE}/lastRegistrations"]'
+              delay: 20m
+              units: unixtime
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.[0].datetime'
+                - type: JAVASCRIPT
+                  parameters:
+                    - 'return Date.parse(value)'
+                - type: MULTIPLIER
+                  parameters:
+                    - '0.001'
+              tags:
+                - tag: Application
+                  value: 'Telephony {#ACCOUNT}'
+              trigger_prototypes:
+                - uuid: e37ac8399a8843d3b220806efdb9278d
+                  expression: 'now()-last(/Futur-Tech OVH API/ovh-api-get.py["{$OVH_API_CONF_NAME}","/telephony/{#ACCOUNT}/line/{#SERVICE}/lastRegistrations"])>{$OVH_TEL_REGISTRATION_WARN}'
+                  name: '{#ACCOUNT} - {#SERVICE} No telephony service registration in the last {$OVH_TEL_REGISTRATION_WARN}'
+                  opdata: 'Service Description: {ITEM.LASTVALUE1} Latest registration date: {ITEM.LASTVALUE2}'
+                  url: 'https://www.ovhtelecom.fr/manager/#/telephony/{#ACCOUNT}/line/{#SERVICE}/detailsOffer'
+                  priority: HIGH
+                  description: |
+                    This can be a false alarm! 
+                    It has been observed that the data from the API and the current OVH console are sometimes not up-to-date concerning the registration date... Use the "Manager v4" from the menu on the left in order to access the old OVH Console to see if data are more up-to-date.
+                    
+                    Registration of service is valid for max 1 hour.
+          lld_macro_paths:
+            - lld_macro: '{#ACCOUNT}'
+              path: $.source_result
+            - lld_macro: '{#SERVICE}'
+              path: $.loop_result
+      tags:
+        - tag: Futur-Tech
+        - tag: Upgraded
+          value: 'false'
+      macros:
+        - macro: '{$OVH_API_CONF_NAME}'
+          value: template_api
+          description: 'Name of the conf file which contains the API keys in /usr/local/etc/ (without the.conf)'
+        - macro: '{$OVH_DNS_CHANGED_WARN}'
+          value: 1d
+          description: 'Trigger if DNS zone was updated'
+        - macro: '{$OVH_EMAIL_FETCHMAIL}'
+          value: '0'
+          description: 'By default, email accounts are not mailfetched'
+        - macro: '{$OVH_EMAIL_FETCHMAIL:"domain.tld, user"}'
+          value: '1'
+          description: 'Exemple of macro to monitor a mailfetched account (should be kept empty)'
+        - macro: '{$OVH_EMAIL_IGNORE}'
+          value: '0'
+          description: 'By default, email accounts are monitored'
+        - macro: '{$OVH_EMAIL_IGNORE:"domain.tld,user"}'
+          value: '1'
+          description: 'Exemple of macro to ignore trigger for a specific email account.'
+        - macro: '{$OVH_TEL_REGISTRATION_WARN}'
+          value: 3h
+          description: 'Trigger if service is not registered without this time (registration is valid 1 hour)'
