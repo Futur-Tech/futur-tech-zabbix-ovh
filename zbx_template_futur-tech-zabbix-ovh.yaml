@@ -360,8 +360,6 @@ zabbix_export:
               path: $.loop_result
       tags:
         - tag: Futur-Tech
-        - tag: Upgraded
-          value: 'false'
       macros:
         - macro: '{$OVH_API_CONF_NAME}'
           value: template_api
