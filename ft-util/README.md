@@ -146,3 +146,10 @@ Functions to help in the deployement of sudoers file in `/etc/sudoers.d/`.
 
 > Script dependency:
 > - ft_util_log
+
+## ft_util_usrmgmt
+Functions to help in the deployement of users and permissions.
+
+> Script dependency:
+> - ft_util_log
+> - ft_util_inc_func

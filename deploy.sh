@@ -2,7 +2,7 @@
 
 source "$(dirname "$0")/ft-util/ft_util_inc_var"
 source "$(dirname "$0")/ft-util/ft_util_inc_func"
-source "$(dirname "$0")/ft-util/ft_util_sudoers"
+source "$(dirname "$0")/ft-util/ft_util_sudoersd"
 source "$(dirname "$0")/ft-util/ft_util_usrmgmt"
 
 app_name="futur-tech-zabbix-ovh"
