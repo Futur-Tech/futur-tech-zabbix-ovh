@@ -39,7 +39,7 @@ apply_ownership() {
 
     if user_exists "$user"; then
         if group_exists "$group"; then
-            run_cmd_log chown --changes "$user:$group" "$path"
+            run_cmd_log find "$path" -exec chown --changes "$user:$group" {} +
         fi
     fi
 }
