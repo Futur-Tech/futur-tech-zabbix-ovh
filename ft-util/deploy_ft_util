@@ -21,6 +21,8 @@ download_file ft_util_inc_func
 download_file ft_util_inc_var
 download_file ft_util_log
 download_file ft_util_pkg
+download_file ft_util_sudoers
+download_file ft_util_usrmgmt
 
 download_file README.md
 

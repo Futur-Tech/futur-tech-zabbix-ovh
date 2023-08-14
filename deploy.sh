@@ -2,6 +2,8 @@
 
 source "$(dirname "$0")/ft-util/ft_util_inc_var"
 source "$(dirname "$0")/ft-util/ft_util_inc_func"
+source "$(dirname "$0")/ft-util/ft_util_sudoers"
+source "$(dirname "$0")/ft-util/ft_util_usrmgmt"
 
 app_name="futur-tech-zabbix-ovh"
 required_pkg_arr=("python3" "python3-pip")
@@ -27,17 +29,18 @@ $S_DIR/ft-util/ft_util_file-deploy "$S_DIR/bin/ovh-api-get.py" "${bin_dir}/ovh-a
 $S_DIR/ft-util/ft_util_file-deploy "$S_DIR/bin/ovh-api-post.py" "${bin_dir}/ovh-api-post.py"
 $S_DIR/ft-util/ft_util_conf-update -s "$S_DIR/etc/template_api.conf" -d "${etc_dir}/" -r
 
+apply_ownership "$bin_dir" zabbix
+apply_ownership "$etc_dir" zabbix
+apply_permissions exec "$bin_dir" zabbix
+apply_permissions conf "$etc_dir" zabbix
+
 echo "
   SETUP SUDOERS FILE
 ------------------------------------------"
 
-$S_LOG -d $S_NAME -d "$sudoers_etc" "==============================="
-
-echo "Defaults:zabbix !requiretty" | sudo EDITOR='tee' visudo --file=$sudoers_etc &>/dev/null
-echo "zabbix ALL=(ALL) NOPASSWD:${src_dir}/deploy-update.sh" | sudo EDITOR='tee -a' visudo --file=$sudoers_etc &>/dev/null
-
-cat $sudoers_etc | $S_LOG -d "$S_NAME" -d "$sudoers_etc" -i
-
-$S_LOG -d $S_NAME -d "$sudoers_etc" "==============================="
+bak_if_exist "/etc/sudoers.d/${app_name}"
+sudoersd_reset_file "$app_name" "zabbix"
+sudoersd_addto_file "$app_name" "zabbix" "${S_DIR_PATH}/deploy-update.sh"
+show_bak_diff_rm "/etc/sudoers.d/${app_name}"
 
 exit

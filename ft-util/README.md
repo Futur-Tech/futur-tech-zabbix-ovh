@@ -139,3 +139,10 @@ Note: if usergroup=user then you can omit it.
 
 > Script dependency:
 > - ft_util_log
+
+## ft_util_sudoersd
+
+Functions to help in the deployement of sudoers file in `/etc/sudoers.d/`.
+
+> Script dependency:
+> - ft_util_log

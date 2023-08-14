@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+
+# Check if a user exists
+user_exists() {
+    id "$1" &>/dev/null
+    local exit_code=$?
+    if [ $exit_code -eq 0 ]; then
+        $S_LOG -s debug -d "$S_NAME" "User [${1}] does exist.."
+    else
+        $S_LOG -s crit -d "$S_NAME" "User [${1}] does not exist."
+        return $exit_code
+    fi
+}
+export -f user_exists
+
+# Check if a group exists
+group_exists() {
+    getent group "$1" &>/dev/null
+    local exit_code=$?
+    if [ $exit_code -eq 0 ]; then
+        $S_LOG -s debug -d "$S_NAME" "Group [${1}] does exist.."
+    else
+        $S_LOG -s crit -d "$S_NAME" "Group [${1}] does not exist."
+        return $exit_code
+    fi
+}
+export -f group_exists
+
+# Apply ownership to a path
+apply_ownership() {
+    if [ $# -lt 2 ]; then
+        $S_LOG -s err -d "$S_NAME" "Usage: apply_ownership <path> <group> [user=root]"
+        return 1
+    fi
+
+    local path="$1"
+    local group="${2:-root}"
+    local user="${3:-root}" # Default user is root if not provided
+
+    if user_exists "$user"; then
+        if group_exists "$group"; then
+            run_cmd_log chown "$user:$group" "$path"
+        fi
+    fi
+}
+export -f apply_ownership
+
+# Apply permissions to a path (file or directory)
+apply_permissions() {
+    local operation="$1"
+    local path="$2"
+
+    if [ -e "$path" ]; then
+        if [ "$operation" == "conf" ]; then
+            run_cmd_log chmod --quiet 750 "$path"
+            if [ -d "$path" ]; then
+                run_cmd_log find "$path" -type f -exec chmod --quiet 640 {} \;
+            fi
+        elif [ "$operation" == "exec" ]; then
+            run_cmd_log chmod 750 "$path"
+        elif [ "$operation" == "secure" ]; then
+            run_cmd_log chmod --quiet 700 "$path"
+            if [ -d "$path" ]; then
+                run_cmd_log find "$path" -type f -exec chmod --quiet 600 {} \;
+            fi
+        else
+            $S_LOG -s err -d "$S_NAME" "Invalid operation: $operation"
+            return 1
+        fi
+    else
+        $S_LOG -s err -d "$S_NAME" "Path not found: $path"
+        return 1
+    fi
+}
+export -f apply_permissions
