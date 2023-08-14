@@ -27,14 +27,14 @@ group_exists() {
 export -f group_exists
 
 # Apply ownership to a path
-apply_ownership() {
+enforce_ownership() {
     if [ $# -lt 2 ]; then
-        $S_LOG -s err -d "$S_NAME" "Usage: apply_ownership <path> <group> [user=root]"
+        $S_LOG -s err -d "$S_NAME" "Usage: enforce_ownership <path> <group> [user=root]"
         return 1
     fi
 
     local path="$1"
-    local group="${2:-root}"
+    local group="${2}"
     local user="${3:-root}" # Default user is root if not provided
 
     if user_exists "$user"; then
@@ -43,10 +43,10 @@ apply_ownership() {
         fi
     fi
 }
-export -f apply_ownership
+export -f enforce_ownership
 
 # Apply permissions to a path (file or directory)
-apply_permissions() {
+enforce_permissions() {
     local operation="$1"
     local path="$2"
 
@@ -58,7 +58,7 @@ apply_permissions() {
         elif [ "$operation" == "exec" ]; then
             run_cmd_log find "$path" -exec chmod 750 {} +
 
-        elif [ "$operation" == "secure" ]; then
+        elif [ "$operation" == "secret" ]; then
             run_cmd_log find "$path" -type d -exec chmod 700 {} +
             run_cmd_log find "$path" -type f -exec chmod 600 {} +
         else
@@ -71,4 +71,16 @@ apply_permissions() {
         return 1
     fi
 }
-export -f apply_permissions
+export -f enforce_permissions
+
+# Apply security settings to a path (file or directory)
+enforce_security() {
+    local operation="$1"
+    local path="$2"
+    local group="${3:-root}" # Default group is root if not provided
+    local user="${4:-root}"  # Default user is root if not provided
+
+    enforce_ownership "$path" "$group" "$user"
+    enforce_permissions "$operation" "$path"
+}
+export -f enforce_security

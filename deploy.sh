@@ -29,10 +29,8 @@ $S_DIR/ft-util/ft_util_file-deploy "$S_DIR/bin/ovh-api-get.py" "${bin_dir}/ovh-a
 $S_DIR/ft-util/ft_util_file-deploy "$S_DIR/bin/ovh-api-post.py" "${bin_dir}/ovh-api-post.py"
 $S_DIR/ft-util/ft_util_conf-update -s "$S_DIR/etc/template_api.conf" -d "${etc_dir}/" -r
 
-apply_ownership "$bin_dir" zabbix
-apply_ownership "$etc_dir" zabbix
-apply_permissions exec "$bin_dir" zabbix
-apply_permissions conf "$etc_dir" zabbix
+enforce_security exec "$bin_dir" zabbix
+enforce_security conf "$etc_dir" zabbix
 
 echo "
   SETUP SUDOERS FILE
