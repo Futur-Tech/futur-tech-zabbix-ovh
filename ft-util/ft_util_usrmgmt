@@ -52,20 +52,19 @@ apply_permissions() {
 
     if [ -e "$path" ]; then
         if [ "$operation" == "conf" ]; then
-            run_cmd_log chmod --quiet 750 "$path"
-            if [ -d "$path" ]; then
-                run_cmd_log find "$path" -type f -exec chmod --quiet 640 {} \;
-            fi
+            run_cmd_log find "$path" -type d -exec chmod --changes 750 {} +
+            run_cmd_log find "$path" -type f -exec chmod --changes 640 {} +
+
         elif [ "$operation" == "exec" ]; then
-            run_cmd_log chmod 750 "$path"
+            run_cmd_log find "$path" -exec chmod --changes 750 {} +
+
         elif [ "$operation" == "secure" ]; then
-            run_cmd_log chmod --quiet 700 "$path"
-            if [ -d "$path" ]; then
-                run_cmd_log find "$path" -type f -exec chmod --quiet 600 {} \;
-            fi
+            run_cmd_log find "$path" -type d -exec chmod --changes 700 {} +
+            run_cmd_log find "$path" -type f -exec chmod --changes 600 {} +
         else
             $S_LOG -s err -d "$S_NAME" "Invalid operation: $operation"
             return 1
+
         fi
     else
         $S_LOG -s err -d "$S_NAME" "Path not found: $path"
