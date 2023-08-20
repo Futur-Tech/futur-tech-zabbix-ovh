@@ -21,7 +21,7 @@ echo "
 
 $S_DIR_PATH/ft-util/ft_util_pkg -u -i ${required_pkg_arr[@]} || exit 1
 
-run_cmd_log pip3 install ovh
+run_cmd_log pip3 install ovh --break-system-packages
 
 mkdir_if_missing "${etc_dir}"
 
