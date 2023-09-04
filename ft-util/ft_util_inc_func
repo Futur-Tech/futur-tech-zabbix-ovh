@@ -60,6 +60,20 @@ function run_cmd_nolog() {
 }
 export -f run_cmd_nolog
 
+# Run command, no log and result output only if fail
+# Exit if failed
+function run_cmd_silent() {
+    $@ &>/dev/null
+    local exit_code=$?
+    if [ $exit_code -eq 0 ]; then
+        $S_LOG -s debug -d "$S_NAME" "[${*}] successful"
+    else
+        $S_LOG -s crit -d "$S_NAME" "[${*}] failed with EXIT_CODE=${exit_code}"
+        exit $exit_code
+    fi
+}
+export -f run_cmd_silent
+
 # Run command, output simple log and result
 # Continue if failed
 function run_cmd_log_noexit() {
