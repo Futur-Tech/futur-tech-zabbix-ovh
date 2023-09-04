@@ -99,7 +99,7 @@ export -f run_cmd_nolog_noexit
 # If exist, cp to .bak
 # bak_if_exist path
 function bak_if_exist() {
-    [ -e "${1}" ] && run_cmd_log cp "${1}" "${1}.bak"
+    [ -e "${1}" ] && run_cmd_silent cp "${1}" "${1}.bak"
 }
 export -f bak_if_exist
 
