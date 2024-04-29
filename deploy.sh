@@ -17,12 +17,8 @@ sudoers_etc="/etc/sudoers.d/${app_name}"
 
 $S_LOG -d $S_NAME "Start $S_DIR_NAME/$S_NAME $*"
 
-echo "
-  INSTALL NEEDED PACKAGES & FILES
-------------------------------------------"
-
+# Install needed packages
 $S_DIR_PATH/ft-util/ft_util_pkg -u -i ${required_pkg_arr[@]} || exit 1
-
 run_cmd_log pip3 install ovh --break-system-packages
 
 mkdir_if_missing "${etc_dir}"
@@ -30,19 +26,14 @@ mkdir_if_missing "${bin_dir}"
 $S_DIR/ft-util/ft_util_file-deploy "$S_DIR/bin/" "${bin_dir}"
 $S_DIR/ft-util/ft_util_file-deploy "$S_DIR/externalscripts/ovh-api-get.py" "${extscpt_dir}/ovh-api-get.py"
 $S_DIR/ft-util/ft_util_file-deploy "$S_DIR/externalscripts/ovh-api-post.py" "${extscpt_dir}/ovh-api-post.py"
-
 $S_DIR/ft-util/ft_util_conf-update -s "$S_DIR/etc/template_api.conf" -d "${etc_dir}/" -r
-
 $S_DIR/ft-util/ft_util_file-deploy "$S_DIR/etc.cron.d/${app_name}" "/etc/cron.d/${app_name}" "NO-BACKUP"
 
 enforce_security exec "$extscpt_dir" zabbix
 enforce_security exec "$bin_dir" root
 enforce_security conf "$etc_dir" zabbix
 
-echo "
-  SETUP SUDOERS FILE
-------------------------------------------"
-
+# Setup Sudoers file
 bak_if_exist "/etc/sudoers.d/${app_name}"
 sudoersd_reset_file $app_name zabbix
 sudoersd_addto_file $app_name zabbix "${S_DIR_PATH}/deploy-update.sh"
