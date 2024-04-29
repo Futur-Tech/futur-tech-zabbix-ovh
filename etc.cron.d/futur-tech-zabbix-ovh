@@ -1,0 +1,2 @@
+# Override DNS resolution of OVH API domain to prevent high rate of DNS query on local server
+30 */2 * * * root /usr/local/bin/futur-tech-zabbix-ovh/override_dns_hosts.sh >/dev/null 2>&1
