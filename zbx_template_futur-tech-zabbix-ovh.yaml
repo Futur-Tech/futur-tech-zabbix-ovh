@@ -1,6 +1,6 @@
 zabbix_export:
   version: '6.0'
-  date: '2023-08-03T16:23:58Z'
+  date: '2024-07-15T11:12:26Z'
   groups:
     - uuid: b4e4123eaf014664a0128bf27577fed9
       name: Templates/Futur-Tech/Web
@@ -35,8 +35,10 @@ zabbix_export:
                   parameters:
                     - '0.001'
               tags:
-                - tag: Application
-                  value: 'Domain {#DOMAIN} DNS'
+                - tag: domain
+                  value: '{#DOMAIN}'
+                - tag: service
+                  value: DNS
               trigger_prototypes:
                 - uuid: 782fedda1c9e4dd596791f9250210a3a
                   expression: 'now()-last(/Futur-Tech OVH API/ovh-api-get.py["{$OVH_API_CONF_NAME}","/domain/zone/{#DOMAIN}"])<{$OVH_DNS_CHANGED_WARN}'
@@ -89,8 +91,10 @@ zabbix_export:
               master_item:
                 key: 'ovh-api-get.py["{$OVH_API_CONF_NAME}","/email/domain/{#DOMAIN}/account/{#ACCOUNT}/"]'
               tags:
-                - tag: Application
-                  value: 'Domain {#DOMAIN} Emails'
+                - tag: domain
+                  value: '{#DOMAIN}'
+                - tag: service
+                  value: emails
               trigger_prototypes:
                 - uuid: 00b17cc2bcc046c5be5a3acf43690792
                   expression: |
@@ -115,8 +119,10 @@ zabbix_export:
               master_item:
                 key: 'ovh-api-get.py["{$OVH_API_CONF_NAME}","/email/domain/{#DOMAIN}/account/{#ACCOUNT}/"]'
               tags:
-                - tag: Application
-                  value: 'Domain {#DOMAIN} Emails'
+                - tag: domain
+                  value: '{#DOMAIN}'
+                - tag: service
+                  value: emails
             - uuid: 03add05163b544f1a7901b62b10fbc32
               name: '{#ACCOUNT}@{#DOMAIN} email count'
               type: DEPENDENT
@@ -130,8 +136,10 @@ zabbix_export:
               master_item:
                 key: 'ovh-api-get.py["{$OVH_API_CONF_NAME}","/email/domain/{#DOMAIN}/account/{#ACCOUNT}/usage"]'
               tags:
-                - tag: Application
-                  value: 'Domain {#DOMAIN} Emails'
+                - tag: domain
+                  value: '{#DOMAIN}'
+                - tag: service
+                  value: emails
               trigger_prototypes:
                 - uuid: 4edc967e437942939a018cbf504031c4
                   expression: 'last(/Futur-Tech OVH API/email.domain.usage.count[{#DOMAIN},{#ACCOUNT}])<>0 and min(/Futur-Tech OVH API/email.domain.usage.count[{#DOMAIN},{#ACCOUNT}],#3)<>0 and {$OVH_EMAIL_FETCHMAIL:"{#DOMAIN},{#ACCOUNT}"}=1 and {$OVH_EMAIL_IGNORE:"{#DOMAIN},{#ACCOUNT}"}=0'
@@ -171,8 +179,10 @@ zabbix_export:
               master_item:
                 key: 'ovh-api-get.py["{$OVH_API_CONF_NAME}","/email/domain/{#DOMAIN}/account/{#ACCOUNT}/usage"]'
               tags:
-                - tag: Application
-                  value: 'Domain {#DOMAIN} Emails'
+                - tag: domain
+                  value: '{#DOMAIN}'
+                - tag: service
+                  value: emails
             - uuid: a22a965127c14962ac2a547d3c837f31
               name: '{#ACCOUNT}@{#DOMAIN} details'
               type: EXTERNAL
@@ -185,8 +195,10 @@ zabbix_export:
                   parameters:
                     - 1d
               tags:
-                - tag: Application
-                  value: 'Domain {#DOMAIN} Emails'
+                - tag: domain
+                  value: '{#DOMAIN}'
+                - tag: service
+                  value: emails
             - uuid: d7967a26cc724305811a24d02c22771b
               name: '{#ACCOUNT}@{#DOMAIN} usage'
               type: EXTERNAL
@@ -199,8 +211,10 @@ zabbix_export:
                   parameters:
                     - 1d
               tags:
-                - tag: Application
-                  value: 'Domain {#DOMAIN} Emails'
+                - tag: domain
+                  value: '{#DOMAIN}'
+                - tag: service
+                  value: emails
             - uuid: 60c6fd1849d649339fb5ab271a445ea1
               name: '{#ACCOUNT}@{#DOMAIN} space update quota request'
               type: EXTERNAL
@@ -209,8 +223,10 @@ zabbix_export:
               trends: '0'
               value_type: TEXT
               tags:
-                - tag: Application
-                  value: 'Domain {#DOMAIN} Emails'
+                - tag: domain
+                  value: '{#DOMAIN}'
+                - tag: service
+                  value: emails
               trigger_prototypes:
                 - uuid: 1dbd5c3fcdab4231800acbeba28150ff
                   expression: 'last(/Futur-Tech OVH API/ovh-api-post.py["{$OVH_API_CONF_NAME}","/email/domain/{#DOMAIN}/account/{#ACCOUNT}/updateUsage"],#1)<>"null" and last(/Futur-Tech OVH API/ovh-api-post.py["{$OVH_API_CONF_NAME}","/email/domain/{#DOMAIN}/account/{#ACCOUNT}/updateUsage"],#2)<>"null"'
@@ -268,8 +284,8 @@ zabbix_export:
                   parameters:
                     - 2h
               tags:
-                - tag: Application
-                  value: 'API Keys'
+                - tag: service
+                  value: api
               trigger_prototypes:
                 - uuid: 5ab3fb69b1d54b31885a8ab56d386c0a
                   expression: 'count(/Futur-Tech OVH API/ovh-api-get.py["{$OVH_API_CONF_NAME}","/me/api/application/{#APP_ID}"],#2)<2'
@@ -320,8 +336,10 @@ zabbix_export:
                   parameters:
                     - $.description
               tags:
-                - tag: Application
-                  value: 'Telephony {#ACCOUNT}'
+                - tag: account
+                  value: '{#ACCOUNT}'
+                - tag: service
+                  value: telephony
             - uuid: 634f504c9656428987ecec19e2b82558
               name: '{#ACCOUNT} - {#SERVICE} telephony service latest registration'
               type: EXTERNAL
@@ -339,8 +357,11 @@ zabbix_export:
                   parameters:
                     - '0.001'
               tags:
-                - tag: Application
                   value: 'Telephony {#ACCOUNT}'
+                - tag: account
+                  value: '{#ACCOUNT}'
+                - tag: service
+                  value: telephony
               trigger_prototypes:
                 - uuid: e37ac8399a8843d3b220806efdb9278d
                   expression: 'now()-last(/Futur-Tech OVH API/ovh-api-get.py["{$OVH_API_CONF_NAME}","/telephony/{#ACCOUNT}/line/{#SERVICE}/lastRegistrations"])>{$OVH_TEL_REGISTRATION_WARN}'
