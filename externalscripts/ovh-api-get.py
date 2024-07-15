@@ -41,17 +41,22 @@ client = ovh.Client(
 result = client.get(api_path)
 
 # Check if need to loop through the result
-if len(sys.argv)>3:
-    loop_api_path=str(sys.argv[3])
+if len(sys.argv) > 3:
+    loop_api_path = str(sys.argv[3])
     result_loop = []
     for value in result:
-        result_loop_tmp = client.get(loop_api_path.replace("#loop#", str(value)))
+        try:
+            result_loop_tmp = client.get(loop_api_path.replace("#loop#", str(value)))
+        except ovh.exceptions.APIError as e:
+            # print(f"Error fetching data for {value}: {e}")
+            continue
+
         for value_tmp in result_loop_tmp:
-            result_dict = {"source_result" : value, "loop_result" : value_tmp}
+            result_dict = {"source_result": value, "loop_result": value_tmp}
             result_loop.append(result_dict)
-            
-    # Now we replace previous results by our new results        
-    result=result_loop
+
+    # Now we replace previous results by our new results
+    result = result_loop
 
 # Pretty print
 print(json.dumps(result, indent=4))
