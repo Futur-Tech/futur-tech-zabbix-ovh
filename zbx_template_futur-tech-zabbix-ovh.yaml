@@ -357,7 +357,6 @@ zabbix_export:
                   parameters:
                     - '0.001'
               tags:
-                  value: 'Telephony {#ACCOUNT}'
                 - tag: account
                   value: '{#ACCOUNT}'
                 - tag: service
