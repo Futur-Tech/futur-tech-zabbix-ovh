@@ -7,7 +7,7 @@ usage() {
 [-s <path_source_conf>] \
 [-r update all configs in folder path_destination_conf] \
 [-d <path_destination_conf (it can be a folder if -r)>] \
-[-y for dry run]" 1>&2
+[-y ask to continue if conf file variables have been modified]" 1>&2
     exit 1
 }
 
@@ -29,7 +29,7 @@ while getopts "yrs:d:" o; do
         recursive=true
         ;;
     y)
-        dry_run=true
+        ask_continue=true
         ;;
 
     : | *)
@@ -40,6 +40,8 @@ done
 shift "$((OPTIND - 1))"
 
 if [ -z "$source_conf" ] || [ -z "$dest_conf" ]; then usage; fi
+
+modif_cnt=0 # Modification count
 
 conf_update() {
 
@@ -58,7 +60,7 @@ conf_update() {
 
     for step in "${arrSteps[@]}"; do
         # empty the target file
-        if [ "$step" = "replace" ]; then [[ $dry_run ]] || >"$targetFile"; fi
+        if [ "$step" = "replace" ]; then >"$targetFile"; fi
 
         # if search we loop throught the target
         # if replace we loop throught the source
@@ -86,6 +88,7 @@ conf_update() {
                         VALUE=${BASH_REMATCH[3]}
                         if [ "${arrConf[${BASH_REMATCH[2]}]}" != "${BASH_REMATCH[3]}" ]; then
                             VALUE=${BASH_REMATCH[3]}
+                            ((modif_cnt++))
                             $S_LOG -s warn -d $S_NAME -d "$targetFile" "(Template) Default: ${BASH_REMATCH[2]}=$VALUE"
                         else
                             $S_LOG -s debug -d $S_NAME -d "$targetFile" "(Template) Kept: ${BASH_REMATCH[2]}=$VALUE"
@@ -99,11 +102,12 @@ conf_update() {
                     else
                         VALUE=${BASH_REMATCH[3]}
                         $S_LOG -s warn -d $S_NAME -d "$targetFile" "Default: ${BASH_REMATCH[2]}=$VALUE"
+                        ((modif_cnt++))
                     fi
-                    [[ $dry_run ]] || printf '%s\n' "${BASH_REMATCH[1]}${BASH_REMATCH[2]}=$VALUE" >>"$targetFile"
+                    printf '%s\n' "${BASH_REMATCH[1]}${BASH_REMATCH[2]}=$VALUE" >>"$targetFile"
                 fi
             else
-                if [ "$step" = "replace" ]; then [[ $dry_run ]] || printf '%s\n' "$line" >>"$targetFile"; fi
+                if [ "$step" = "replace" ]; then printf '%s\n' "$line" >>"$targetFile"; fi
             fi
         done <${arrFiles[$step]}
     done
@@ -117,11 +121,20 @@ conf_update() {
 }
 
 conf_create() {
-    if [[ $dry_run ]]; then
-        $S_LOG -s $? -d $S_NAME "Copy new $source_conf ----> $dest_conf"
-    else
-        mkdir -p "$(dirname "$dest_conf")" && cp "$source_conf" "$dest_conf"
-        $S_LOG -s $? -d $S_NAME "Copy new $source_conf ----> $dest_conf"
+    mkdir -p "$(dirname "$dest_conf")" && cp "$source_conf" "$dest_conf"
+    $S_LOG -s $? -d $S_NAME "Copy new $source_conf ----> $dest_conf"
+    ((modif_cnt++))
+}
+
+check_conf_modified() {
+    local target="$1"
+    if [ $modif_cnt -gt 0 ]; then
+        $S_LOG -s warn -d $S_NAME -d "$target" "Modification count: $modif_cnt"
+        if [ "$ask_continue" = true ]; then
+            echo "Press any key to continue, or Ctrl+C to abort..."
+            read -n 1 -s
+            $S_LOG -s debug -d $S_NAME "Continuing."
+        fi
     fi
 }
 
@@ -132,30 +145,31 @@ if [ "$recursive" = true ]; then
             [ -f "$file" ] || break
             [ "${file##*.}" = "${source_conf##*.}" ] || continue # only process files with the same ext than the source
 
-            $S_LOG -s debug -d $S_NAME -d "$file" "Create backup of file $file"
-            [[ $dry_run ]] || cp "$file" "$file.$(date +\%Y\%m\%d\-\%H\%M\%S).bak"
-
-            conf_update "$source_conf" "$file"
-
+            cp "$file" "$file.$(date +\%Y\%m\%d\-\%H\%M\%S).bak" # Make a backup
+            conf_update "$source_conf" "$file"                   # Update existing conf
+            check_conf_modified "$file"                          # Check if conf has been modified
         done
         if [ -z "$(ls -A ${dest_conf})" ]; then
-            conf_create
+            conf_create # Create new conf
         else
-            [[ $dry_run ]] || $S_DIR_PATH/ft_util_bak-cleaner "${dest_conf%/}/"
+            $S_DIR_PATH/ft_util_bak-cleaner "${dest_conf%/}/"
         fi
 
     else
         conf_create
     fi
+    check_conf_modified "$dest_conf"
+
 else
     if [ -f "$dest_conf" ]; then
         $S_LOG -s debug -d $S_NAME -d "$dest_conf" "Create backup of file $dest_conf"
-        [[ $dry_run ]] || cp "$dest_conf" "$dest_conf.$(date +\%Y\%m\%d\-\%H\%M\%S).bak"
+        cp "$dest_conf" "$dest_conf.$(date +\%Y\%m\%d\-\%H\%M\%S).bak"
 
         conf_update "$source_conf" "$dest_conf"
 
-        [[ $dry_run ]] || $S_DIR_PATH/ft_util_bak-cleaner "$(readlink -f "$dest_conf")"
+        $S_DIR_PATH/ft_util_bak-cleaner "$(readlink -f "$dest_conf")"
     else
         conf_create
     fi
+    check_conf_modified "$dest_conf"
 fi
