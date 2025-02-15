@@ -131,9 +131,23 @@ check_conf_modified() {
     if [ $modif_cnt -gt 0 ]; then
         $S_LOG -s warn -d $S_NAME -d "$target" "Modification count: $modif_cnt"
         if [ "$ask_continue" = true ]; then
-            echo "Press any key to continue, or Ctrl+C to abort..."
-            read -n 1 -s
-            $S_LOG -s debug -d $S_NAME "Continuing."
+            echo "Do you want to edit the file '$target' before continuing? (y/n)"
+            while true; do
+                # Read one character silently (-rsn1)
+                read -rsn1 key
+                # Normalize to lowercase
+                key=$(echo "$key" | tr '[:upper:]' '[:lower:]')
+                if [ "$key" = "n" ]; then
+                    $S_LOG -s debug -d "$S_NAME" "User pressed N. Continuing without editing."
+                    break
+                elif [ "$key" = "y" ]; then
+                    $S_LOG -s debug -d "$S_NAME" "User pressed Y. Opening '$target' with vim for editing."
+                    vim "$target"
+                    break
+                else
+                    echo "Invalid input. Please press Y to edit or N to continue."
+                fi
+            done
         fi
     fi
 }
