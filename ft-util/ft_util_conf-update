@@ -172,7 +172,6 @@ if [ "$recursive" = true ]; then
     else
         conf_create
     fi
-    check_conf_modified "$dest_conf"
 
 else
     if [ -f "$dest_conf" ]; then
