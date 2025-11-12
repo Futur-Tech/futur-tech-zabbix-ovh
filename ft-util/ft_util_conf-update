@@ -159,9 +159,9 @@ if [ "$recursive" = true ]; then
             [ -f "$file" ] || break
             [ "${file##*.}" = "${source_conf##*.}" ] || continue # only process files with the same ext than the source
 
-            cp "$file" "$file.$(date +\%Y\%m\%d\-\%H\%M\%S).bak" # Make a backup
-            conf_update "$source_conf" "$file"                   # Update existing conf
-            check_conf_modified "$file"                          # Check if conf has been modified
+            cp --preserve "$file" "$file.$(date +\%Y\%m\%d\-\%H\%M\%S).bak" # Make a backup
+            conf_update "$source_conf" "$file"                              # Update existing conf
+            check_conf_modified "$file"                                     # Check if conf has been modified
         done
         if [ -z "$(ls -A ${dest_conf})" ]; then
             conf_create # Create new conf
@@ -176,7 +176,7 @@ if [ "$recursive" = true ]; then
 else
     if [ -f "$dest_conf" ]; then
         $S_LOG -s debug -d $S_NAME -d "$dest_conf" "Create backup of file $dest_conf"
-        cp "$dest_conf" "$dest_conf.$(date +\%Y\%m\%d\-\%H\%M\%S).bak"
+        cp --preserve "$dest_conf" "$dest_conf.$(date +\%Y\%m\%d\-\%H\%M\%S).bak"
 
         conf_update "$source_conf" "$dest_conf"
 
