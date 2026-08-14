@@ -536,6 +536,8 @@ zabbix_export:
                   value: '{#EMAIL}'
                 - tag: offer
                   value: '{#OFFER}'
+                - tag: organization
+                  value: '{#ORGANIZATION}'
                 - tag: service
                   value: zimbra
             - uuid: 7a883fcfada64e2d81ba2ba36119d8a2
@@ -556,6 +558,8 @@ zabbix_export:
                   value: '{#EMAIL}'
                 - tag: offer
                   value: '{#OFFER}'
+                - tag: organization
+                  value: '{#ORGANIZATION}'
                 - tag: service
                   value: zimbra
             - uuid: 14324ce3826d4c21a6d08973c37383da
@@ -579,6 +583,8 @@ zabbix_export:
                   value: '{#EMAIL}'
                 - tag: offer
                   value: '{#OFFER}'
+                - tag: organization
+                  value: '{#ORGANIZATION}'
                 - tag: service
                   value: zimbra
             - uuid: ee93435efd774fc0814e77337d72edfc
@@ -608,6 +614,8 @@ zabbix_export:
                   value: '{#EMAIL}'
                 - tag: offer
                   value: '{#OFFER}'
+                - tag: organization
+                  value: '{#ORGANIZATION}'
                 - tag: service
                   value: zimbra
               trigger_prototypes:
@@ -646,6 +654,8 @@ zabbix_export:
                   value: '{#EMAIL}'
                 - tag: offer
                   value: '{#OFFER}'
+                - tag: organization
+                  value: '{#ORGANIZATION}'
                 - tag: service
                   value: zimbra
             - uuid: 4f74d5c668984bfba6cd608a006afe9c
@@ -670,6 +680,8 @@ zabbix_export:
                   value: '{#EMAIL}'
                 - tag: offer
                   value: '{#OFFER}'
+                - tag: organization
+                  value: '{#ORGANIZATION}'
                 - tag: service
                   value: zimbra
               trigger_prototypes:
@@ -708,6 +720,8 @@ zabbix_export:
                   value: '{#EMAIL}'
                 - tag: offer
                   value: '{#OFFER}'
+                - tag: organization
+                  value: '{#ORGANIZATION}'
                 - tag: service
                   value: zimbra
               trigger_prototypes:
@@ -749,6 +763,8 @@ zabbix_export:
               path: $.loop_result.currentState.email
             - lld_macro: '{#OFFER}'
               path: $.loop_result.currentState.offer
+            - lld_macro: '{#ORGANIZATION}'
+              path: $.loop_result.currentState.organizationLabel
             - lld_macro: '{#PLATFORM_ID}'
               path: $.source_result
       tags:
