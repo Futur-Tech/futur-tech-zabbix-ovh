@@ -23,6 +23,7 @@ zabbix_export:
               type: EXTERNAL
               key: 'ovh-api-get.py["{$OVH_API_CONF_NAME}","/domain/zone/{#DOMAIN}"]'
               delay: 30m
+              history: 90d
               units: unixtime
               preprocessing:
                 - type: JSONPATH
@@ -79,6 +80,7 @@ zabbix_export:
               type: DEPENDENT
               key: 'email.domain.account.isblocked[{#DOMAIN},{#ACCOUNT}]'
               delay: '0'
+              history: 90d
               trends: '0'
               value_type: TEXT
               preprocessing:
@@ -108,6 +110,7 @@ zabbix_export:
               type: DEPENDENT
               key: 'email.domain.account.size[{#DOMAIN},{#ACCOUNT}]'
               delay: '0'
+              history: 90d
               units: bytes
               preprocessing:
                 - type: JSONPATH
@@ -128,6 +131,7 @@ zabbix_export:
               type: DEPENDENT
               key: 'email.domain.usage.count[{#DOMAIN},{#ACCOUNT}]'
               delay: '0'
+              history: 90d
               units: email(s)
               preprocessing:
                 - type: JSONPATH
@@ -171,6 +175,7 @@ zabbix_export:
               type: DEPENDENT
               key: 'email.domain.usage.size[{#DOMAIN},{#ACCOUNT}]'
               delay: '0'
+              history: 90d
               units: bytes
               preprocessing:
                 - type: JSONPATH
@@ -188,6 +193,7 @@ zabbix_export:
               type: EXTERNAL
               key: 'ovh-api-get.py["{$OVH_API_CONF_NAME}","/email/domain/{#DOMAIN}/account/{#ACCOUNT}/"]'
               delay: 30m
+              history: 90d
               trends: '0'
               value_type: TEXT
               preprocessing:
@@ -204,6 +210,7 @@ zabbix_export:
               type: EXTERNAL
               key: 'ovh-api-get.py["{$OVH_API_CONF_NAME}","/email/domain/{#DOMAIN}/account/{#ACCOUNT}/usage"]'
               delay: 30m
+              history: 90d
               trends: '0'
               value_type: TEXT
               preprocessing:
@@ -220,6 +227,7 @@ zabbix_export:
               type: EXTERNAL
               key: 'ovh-api-post.py["{$OVH_API_CONF_NAME}","/email/domain/{#DOMAIN}/account/{#ACCOUNT}/updateUsage"]'
               delay: 90m
+              history: 90d
               trends: '0'
               value_type: TEXT
               tags:
@@ -274,6 +282,7 @@ zabbix_export:
               type: EXTERNAL
               key: 'ovh-api-get.py["{$OVH_API_CONF_NAME}","/me/api/application/{#APP_ID}"]'
               delay: 15m
+              history: 90d
               trends: '0'
               value_type: TEXT
               preprocessing:
@@ -329,6 +338,7 @@ zabbix_export:
               type: EXTERNAL
               key: 'ovh-api-get.py["{$OVH_API_CONF_NAME}","/telephony/{#ACCOUNT}/line/{#SERVICE}"]'
               delay: 20m
+              history: 90d
               trends: '0'
               value_type: TEXT
               preprocessing:
@@ -345,6 +355,7 @@ zabbix_export:
               type: EXTERNAL
               key: 'ovh-api-get.py["{$OVH_API_CONF_NAME}","/telephony/{#ACCOUNT}/line/{#SERVICE}/lastRegistrations"]'
               delay: 20m
+              history: 90d
               units: unixtime
               preprocessing:
                 - type: JSONPATH
@@ -378,6 +389,370 @@ zabbix_export:
               path: $.source_result
             - lld_macro: '{#SERVICE}'
               path: $.loop_result
+        - uuid: 2be8284367dd4cfaadd41b745ee8c7dc
+          name: 'Zimbra platform discovery'
+          type: EXTERNAL
+          key: 'ovh-api-get.py["{$OVH_API_CONF_NAME}","/v2/zimbra/platform"]'
+          delay: 10h
+          description: 'OVH API v2 returns a list of objects, it is directly usable for discovery without any preprocessing.'
+          item_prototypes:
+            - uuid: 292b2f36b4c2423897f2f12e96c72e7d
+              name: '{#PLATFORM_NAME} Zimbra platform details'
+              type: EXTERNAL
+              key: 'ovh-api-get.py["{$OVH_API_CONF_NAME}","/v2/zimbra/platform/{#PLATFORM_ID}"]'
+              delay: 30m
+              history: 90d
+              trends: '0'
+              value_type: TEXT
+              preprocessing:
+                - type: DISCARD_UNCHANGED_HEARTBEAT
+                  parameters:
+                    - 1d
+              tags:
+                - tag: platform
+                  value: '{#PLATFORM_NAME}'
+                - tag: service
+                  value: zimbra
+            - uuid: 20fb24eeb00a4aec9fdd81f47776d4ee
+              name: '{#PLATFORM_NAME} Zimbra platform status'
+              type: DEPENDENT
+              key: 'zimbra.platform.status[{#PLATFORM_ID}]'
+              delay: '0'
+              history: 90d
+              trends: '0'
+              value_type: TEXT
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - $.resourceStatus
+                - type: DISCARD_UNCHANGED_HEARTBEAT
+                  parameters:
+                    - 1d
+              master_item:
+                key: 'ovh-api-get.py["{$OVH_API_CONF_NAME}","/v2/zimbra/platform/{#PLATFORM_ID}"]'
+              tags:
+                - tag: platform
+                  value: '{#PLATFORM_NAME}'
+                - tag: service
+                  value: zimbra
+              trigger_prototypes:
+                - uuid: 098c4756af15436e9d916de13f720de0
+                  expression: 'last(/Futur-Tech OVH API/zimbra.platform.status[{#PLATFORM_ID}])<>"READY"'
+                  name: '{#PLATFORM_NAME} Zimbra platform is not ready'
+                  opdata: 'Status: {ITEM.LASTVALUE1}'
+                  url: 'https://www.ovh.com/manager/web-cloud/zimbra-mail'
+                  priority: AVERAGE
+            - uuid: 2346cd925b294b5dbfd02b7f09f97ad4
+              name: '{#PLATFORM_NAME} Zimbra account slots configured'
+              type: DEPENDENT
+              key: 'zimbra.platform.slot.configured[{#PLATFORM_ID}]'
+              delay: '0'
+              history: 90d
+              units: 'account(s)'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.currentState.accountsStatistics[*].configuredAccountsCount.sum()'
+                  error_handler: CUSTOM_VALUE
+                  error_handler_params: '0'
+              master_item:
+                key: 'ovh-api-get.py["{$OVH_API_CONF_NAME}","/v2/zimbra/platform/{#PLATFORM_ID}"]'
+              tags:
+                - tag: platform
+                  value: '{#PLATFORM_NAME}'
+                - tag: service
+                  value: zimbra
+            - uuid: 450722cefd2b49b2a9bbb58a5ccc357e
+              name: '{#PLATFORM_NAME} Zimbra account slots free'
+              type: DEPENDENT
+              key: 'zimbra.platform.slot.free[{#PLATFORM_ID}]'
+              delay: '0'
+              history: 90d
+              units: 'account(s)'
+              description: 'Slots which are paid for but not assigned to an email account yet.'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.currentState.accountsStatistics[*].availableAccountsCount.sum()'
+                  error_handler: CUSTOM_VALUE
+                  error_handler_params: '0'
+              master_item:
+                key: 'ovh-api-get.py["{$OVH_API_CONF_NAME}","/v2/zimbra/platform/{#PLATFORM_ID}"]'
+              tags:
+                - tag: platform
+                  value: '{#PLATFORM_NAME}'
+                - tag: service
+                  value: zimbra
+            - uuid: 07e6f77c14164704a86f366622410324
+              name: '{#PLATFORM_NAME} Zimbra quota usage refresh request'
+              type: EXTERNAL
+              key: 'ovh-api-post.py["{$OVH_API_CONF_NAME}","/v2/zimbra/platform/{#PLATFORM_ID}/refreshQuotaUsage"]'
+              delay: 90m
+              history: 90d
+              trends: '0'
+              value_type: TEXT
+              description: 'Quota usage of the Zimbra accounts is only refreshed on demand, this asks OVH to recompute it for every account of the platform.'
+              tags:
+                - tag: platform
+                  value: '{#PLATFORM_NAME}'
+                - tag: service
+                  value: zimbra
+              trigger_prototypes:
+                - uuid: a0d1dc8ec56a4ab6a76c3e6d17c1e8e3
+                  expression: 'last(/Futur-Tech OVH API/ovh-api-post.py["{$OVH_API_CONF_NAME}","/v2/zimbra/platform/{#PLATFORM_ID}/refreshQuotaUsage"],#1)<>"null" and last(/Futur-Tech OVH API/ovh-api-post.py["{$OVH_API_CONF_NAME}","/v2/zimbra/platform/{#PLATFORM_ID}/refreshQuotaUsage"],#2)<>"null"'
+                  name: '{#PLATFORM_NAME} Zimbra quota usage refresh request failed'
+                  opdata: 'Latest refresh request output: {ITEM.LASTVALUE1}'
+                  url: 'https://www.ovh.com/manager/web-cloud/zimbra-mail'
+                  priority: WARNING
+                  description: |
+                    The returned value should be "null".
+                    In order to avoid alerts when OVH API is momentarily down, the last 2 values are checked.
+          lld_macro_paths:
+            - lld_macro: '{#PLATFORM_ID}'
+              path: $.id
+            - lld_macro: '{#PLATFORM_NAME}'
+              path: $.currentState.name
+        - uuid: 1f01e7961574484ca2b769c4ad147a0b
+          name: 'Zimbra account discovery'
+          type: EXTERNAL
+          key: 'ovh-api-get.py["{$OVH_API_CONF_NAME}","/v2/zimbra/platform","/v2/zimbra/platform/#loop#/account","id"]'
+          delay: 10h
+          description: 'The 4th argument tells the script to loop on the "id" key of each platform object returned by OVH API v2.'
+          item_prototypes:
+            - uuid: 119fb8c1c77c4e58a17b5301eb1bcb47
+              name: '{#EMAIL} details'
+              type: EXTERNAL
+              key: 'ovh-api-get.py["{$OVH_API_CONF_NAME}","/v2/zimbra/platform/{#PLATFORM_ID}/account/{#ACCOUNT_ID}"]'
+              delay: 30m
+              history: 90d
+              trends: '0'
+              value_type: TEXT
+              preprocessing:
+                - type: DISCARD_UNCHANGED_HEARTBEAT
+                  parameters:
+                    - 1d
+              tags:
+                - tag: email
+                  value: '{#EMAIL}'
+                - tag: offer
+                  value: '{#OFFER}'
+                - tag: service
+                  value: zimbra
+            - uuid: 7a883fcfada64e2d81ba2ba36119d8a2
+              name: '{#EMAIL} space used'
+              type: DEPENDENT
+              key: 'zimbra.account.quota.used[{#PLATFORM_ID},{#ACCOUNT_ID}]'
+              delay: '0'
+              history: 90d
+              units: B
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - $.currentState.quota.used
+                - type: MULTIPLIER
+                  parameters:
+                    - '{$OVH_ZIMBRA_QUOTA_TO_BYTES}'
+              master_item:
+                key: 'ovh-api-get.py["{$OVH_API_CONF_NAME}","/v2/zimbra/platform/{#PLATFORM_ID}/account/{#ACCOUNT_ID}"]'
+              tags:
+                - tag: email
+                  value: '{#EMAIL}'
+                - tag: offer
+                  value: '{#OFFER}'
+                - tag: service
+                  value: zimbra
+            - uuid: 14324ce3826d4c21a6d08973c37383da
+              name: '{#EMAIL} space available'
+              type: DEPENDENT
+              key: 'zimbra.account.quota.maximum[{#PLATFORM_ID},{#ACCOUNT_ID}]'
+              delay: '0'
+              history: 90d
+              units: B
+              description: 'Total space of the account, offer included plus any additional space bought.'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - $.currentState.quota.maximum
+                - type: MULTIPLIER
+                  parameters:
+                    - '{$OVH_ZIMBRA_QUOTA_TO_BYTES}'
+              master_item:
+                key: 'ovh-api-get.py["{$OVH_API_CONF_NAME}","/v2/zimbra/platform/{#PLATFORM_ID}/account/{#ACCOUNT_ID}"]'
+              tags:
+                - tag: email
+                  value: '{#EMAIL}'
+                - tag: offer
+                  value: '{#OFFER}'
+                - tag: service
+                  value: zimbra
+            - uuid: ee93435efd774fc0814e77337d72edfc
+              name: '{#EMAIL} space usage last refresh'
+              type: DEPENDENT
+              key: 'zimbra.account.quota.refreshed[{#PLATFORM_ID},{#ACCOUNT_ID}]'
+              delay: '0'
+              history: 90d
+              units: unixtime
+              description: 'Space usage is not computed in real time by OVH, it is only refreshed when requested by the "Zimbra quota usage refresh request" item.'
+              preprocessing:
+                - type: JAVASCRIPT
+                  parameters:
+                    - |
+                      var date = JSON.parse(value).currentState.quotaRefreshedAt;
+                      if (!date) { throw "Space usage was never refreshed"; }
+                      return Date.parse(date);
+                  error_handler: DISCARD_VALUE
+                - type: MULTIPLIER
+                  parameters:
+                    - '0.001'
+              master_item:
+                key: 'ovh-api-get.py["{$OVH_API_CONF_NAME}","/v2/zimbra/platform/{#PLATFORM_ID}/account/{#ACCOUNT_ID}"]'
+              tags:
+                - tag: email
+                  value: '{#EMAIL}'
+                - tag: offer
+                  value: '{#OFFER}'
+                - tag: service
+                  value: zimbra
+              trigger_prototypes:
+                - uuid: 39d365a24c6d477281ce5fcaed25bc0b
+                  expression: |
+                    now()-last(/Futur-Tech OVH API/zimbra.account.quota.refreshed[{#PLATFORM_ID},{#ACCOUNT_ID}])>{$OVH_ZIMBRA_QUOTA_REFRESH_WARN}
+                    and {$OVH_ZIMBRA_IGNORE:"{#EMAIL}"}=0
+                  name: '{#EMAIL} space usage has not been refreshed in the last {$OVH_ZIMBRA_QUOTA_REFRESH_WARN}'
+                  opdata: 'Latest refresh date: {ITEM.LASTVALUE1}'
+                  url: 'https://www.ovh.com/manager/web-cloud/zimbra-mail'
+                  priority: WARNING
+                  description: 'The space used reported for this account is stale, the "Zimbra quota usage refresh request" item of the platform is most likely failing.'
+            - uuid: b529b10bc6c94dd5b70f5e1a7276176b
+              name: '{#EMAIL} last connection'
+              type: DEPENDENT
+              key: 'zimbra.account.lastconnection[{#PLATFORM_ID},{#ACCOUNT_ID}]'
+              delay: '0'
+              history: 90d
+              units: unixtime
+              preprocessing:
+                - type: JAVASCRIPT
+                  parameters:
+                    - |
+                      var date = JSON.parse(value).currentState.lastConnectionAt;
+                      if (!date) { throw "Account never connected"; }
+                      return Date.parse(date);
+                  error_handler: DISCARD_VALUE
+                - type: MULTIPLIER
+                  parameters:
+                    - '0.001'
+              master_item:
+                key: 'ovh-api-get.py["{$OVH_API_CONF_NAME}","/v2/zimbra/platform/{#PLATFORM_ID}/account/{#ACCOUNT_ID}"]'
+              tags:
+                - tag: email
+                  value: '{#EMAIL}'
+                - tag: offer
+                  value: '{#OFFER}'
+                - tag: service
+                  value: zimbra
+            - uuid: 4f74d5c668984bfba6cd608a006afe9c
+              name: '{#EMAIL} status'
+              type: DEPENDENT
+              key: 'zimbra.account.status[{#PLATFORM_ID},{#ACCOUNT_ID}]'
+              delay: '0'
+              history: 90d
+              trends: '0'
+              value_type: TEXT
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - $.resourceStatus
+                - type: DISCARD_UNCHANGED_HEARTBEAT
+                  parameters:
+                    - 1d
+              master_item:
+                key: 'ovh-api-get.py["{$OVH_API_CONF_NAME}","/v2/zimbra/platform/{#PLATFORM_ID}/account/{#ACCOUNT_ID}"]'
+              tags:
+                - tag: email
+                  value: '{#EMAIL}'
+                - tag: offer
+                  value: '{#OFFER}'
+                - tag: service
+                  value: zimbra
+              trigger_prototypes:
+                - uuid: 0e50f8f824a44ec395d974869cf5fd72
+                  expression: |
+                    last(/Futur-Tech OVH API/zimbra.account.status[{#PLATFORM_ID},{#ACCOUNT_ID}])<>"READY"
+                    and {$OVH_ZIMBRA_IGNORE:"{#EMAIL}"}=0
+                  name: '{#EMAIL} account is not ready'
+                  opdata: 'Status: {ITEM.LASTVALUE1}'
+                  url: 'https://www.ovh.com/manager/web-cloud/zimbra-mail'
+                  priority: AVERAGE
+                  description: 'Expected value is READY, anything else (SUSPENDED, ERROR, OUT_OF_SYNC...) means the account is not fully operational.'
+            - uuid: 0238fcf192744c2c98b8b019f71adaad
+              name: '{#EMAIL} is blocked'
+              type: DEPENDENT
+              key: 'zimbra.account.detailedstatus[{#PLATFORM_ID},{#ACCOUNT_ID}]'
+              delay: '0'
+              history: 90d
+              trends: '0'
+              value_type: TEXT
+              preprocessing:
+                - type: JAVASCRIPT
+                  parameters:
+                    - |
+                      //OVH only reports a detailed status when something is wrong with the account
+                      var status = JSON.parse(value).currentState.detailedStatus;
+                      if (!status || status.length === 0) { return "OK"; }
+                      return status.map(function (s) { return s.status; }).join(",");
+                - type: DISCARD_UNCHANGED_HEARTBEAT
+                  parameters:
+                    - 1d
+              master_item:
+                key: 'ovh-api-get.py["{$OVH_API_CONF_NAME}","/v2/zimbra/platform/{#PLATFORM_ID}/account/{#ACCOUNT_ID}"]'
+              tags:
+                - tag: email
+                  value: '{#EMAIL}'
+                - tag: offer
+                  value: '{#OFFER}'
+                - tag: service
+                  value: zimbra
+              trigger_prototypes:
+                - uuid: 07ad14f5493f4524aa09fb84147672db
+                  expression: |
+                    last(/Futur-Tech OVH API/zimbra.account.detailedstatus[{#PLATFORM_ID},{#ACCOUNT_ID}])<>"OK"
+                    and {$OVH_ZIMBRA_IGNORE:"{#EMAIL}"}=0
+                  name: '{#EMAIL} account is blocked'
+                  opdata: 'Detailed status: {ITEM.LASTVALUE1}'
+                  url: 'https://www.ovh.com/manager/web-cloud/zimbra-mail'
+                  priority: HIGH
+                  description: 'BLOCKEDFORSPAM means the account has been blocked by OVH for sending spam, BILLINGLOCKED means the slot of the account is not paid for anymore.'
+          trigger_prototypes:
+            - uuid: 43cf35fdedae42c49f0a452c5e41c5a1
+              expression: |
+                last(/Futur-Tech OVH API/zimbra.account.quota.used[{#PLATFORM_ID},{#ACCOUNT_ID}])>last(/Futur-Tech OVH API/zimbra.account.quota.maximum[{#PLATFORM_ID},{#ACCOUNT_ID}])*{$OVH_ZIMBRA_QUOTA_WARN}/100
+                and {$OVH_ZIMBRA_IGNORE:"{#EMAIL}"}=0
+              name: '{#EMAIL} account is almost full'
+              opdata: 'Used: {ITEM.LASTVALUE1} Available: {ITEM.LASTVALUE2}'
+              url: 'https://www.ovh.com/manager/web-cloud/zimbra-mail'
+              priority: AVERAGE
+              dependencies:
+                - name: '{#EMAIL} account is full'
+                  expression: |
+                    last(/Futur-Tech OVH API/zimbra.account.quota.used[{#PLATFORM_ID},{#ACCOUNT_ID}])>last(/Futur-Tech OVH API/zimbra.account.quota.maximum[{#PLATFORM_ID},{#ACCOUNT_ID}])*{$OVH_ZIMBRA_QUOTA_CRIT}/100
+                    and {$OVH_ZIMBRA_IGNORE:"{#EMAIL}"}=0
+            - uuid: 79647ccb22984780a04d867aea61d1c7
+              expression: |
+                last(/Futur-Tech OVH API/zimbra.account.quota.used[{#PLATFORM_ID},{#ACCOUNT_ID}])>last(/Futur-Tech OVH API/zimbra.account.quota.maximum[{#PLATFORM_ID},{#ACCOUNT_ID}])*{$OVH_ZIMBRA_QUOTA_CRIT}/100
+                and {$OVH_ZIMBRA_IGNORE:"{#EMAIL}"}=0
+              name: '{#EMAIL} account is full'
+              opdata: 'Used: {ITEM.LASTVALUE1} Available: {ITEM.LASTVALUE2}'
+              url: 'https://www.ovh.com/manager/web-cloud/zimbra-mail'
+              priority: HIGH
+          lld_macro_paths:
+            - lld_macro: '{#ACCOUNT_ID}'
+              path: $.loop_result.id
+            - lld_macro: '{#EMAIL}'
+              path: $.loop_result.currentState.email
+            - lld_macro: '{#OFFER}'
+              path: $.loop_result.currentState.offer
+            - lld_macro: '{#PLATFORM_ID}'
+              path: $.source_result
       tags:
         - tag: Futur-Tech
       macros:
@@ -402,3 +777,21 @@ zabbix_export:
         - macro: '{$OVH_TEL_REGISTRATION_WARN}'
           value: 3h
           description: 'Trigger if service is not registered without this time (registration is valid 1 hour)'
+        - macro: '{$OVH_ZIMBRA_IGNORE}'
+          value: '0'
+          description: 'By default, Zimbra email accounts are monitored'
+        - macro: '{$OVH_ZIMBRA_IGNORE:"user@domain.tld"}'
+          value: '1'
+          description: 'Exemple of macro to ignore trigger for a specific Zimbra email account.'
+        - macro: '{$OVH_ZIMBRA_QUOTA_CRIT}'
+          value: '99'
+          description: 'Percentage of used space above which a Zimbra account is considered full'
+        - macro: '{$OVH_ZIMBRA_QUOTA_REFRESH_WARN}'
+          value: 1d
+          description: 'Trigger if the space usage of a Zimbra account has not been refreshed by OVH within this time'
+        - macro: '{$OVH_ZIMBRA_QUOTA_TO_BYTES}'
+          value: '1073741824'
+          description: 'The OVH API v2 does not document the unit of the Zimbra quota values. Default assumes GiB, set it to 1 if the API already returns bytes (compare the item value with the OVH Control Panel).'
+        - macro: '{$OVH_ZIMBRA_QUOTA_WARN}'
+          value: '95'
+          description: 'Percentage of used space above which a Zimbra account is considered almost full'

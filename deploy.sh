@@ -19,7 +19,8 @@ $S_LOG -d $S_NAME "Start $S_DIR_NAME/$S_NAME $*"
 
 # Install needed packages
 $S_DIR_PATH/ft-util/ft_util_pkg -u -i ${required_pkg_arr[@]} || exit 1
-run_cmd_log pip3 install ovh --break-system-packages
+# -U is required: OVH API v2 (Zimbra) needs python-ovh >= 1.1.0
+run_cmd_log pip3 install -U ovh --break-system-packages
 
 mkdir_if_missing "${etc_dir}"
 mkdir_if_missing "${bin_dir}"
