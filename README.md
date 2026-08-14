@@ -29,7 +29,7 @@ Works for Zabbix 6.0 Server
 
 1. Edit `/usr/local/etc/futur-tech-zabbix-ovh/template_api.conf` with your API key details
 1. Rename `template_api.conf` to `some_name.conf`
-1. Import the template XML in Zabbix Server
+1. Import the template `zbx_template_futur-tech-zabbix-ovh.yaml` in Zabbix Server
 1. Create a new host and link **Template Futur-Tech OVH API**  
 1. Override the macro `{$OVH_API_CONF_NAME}` with the conf file name (without the **.conf**)
 
@@ -48,6 +48,8 @@ Requirements:
 - The API token needs `GET` and `POST` on `/v2/zimbra/*`.
 
 The template discovers Zimbra platforms and, for every platform, all of its email accounts. It monitors the space used and total, the account status and whether OVH has blocked the account (spam or unpaid slot).
+
+Account items are tagged `service=zimbra`, `email`, `offer` and `organization`, the last one being handy to filter per client on a platform hosting several organizations. Set `{$OVH_ZIMBRA_IGNORE:"user@domain.tld"}` to `1` to silence the triggers of a given account.
 
 OVH does not compute the space used in real time: the template periodically calls `/v2/zimbra/platform/{platformId}/refreshQuotaUsage` to ask for a recomputation, and triggers if that request fails or if the reported figures grow stale.
 
