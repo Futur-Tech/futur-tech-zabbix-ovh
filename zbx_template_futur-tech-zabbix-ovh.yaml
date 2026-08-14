@@ -549,9 +549,6 @@ zabbix_export:
                 - type: JSONPATH
                   parameters:
                     - $.currentState.quota.used
-                - type: MULTIPLIER
-                  parameters:
-                    - '{$OVH_ZIMBRA_QUOTA_TO_BYTES}'
               master_item:
                 key: 'ovh-api-get.py["{$OVH_API_CONF_NAME}","/v2/zimbra/platform/{#PLATFORM_ID}/account/{#ACCOUNT_ID}"]'
               tags:
@@ -562,20 +559,19 @@ zabbix_export:
                 - tag: service
                   value: zimbra
             - uuid: 14324ce3826d4c21a6d08973c37383da
-              name: '{#EMAIL} space available'
+              name: '{#EMAIL} space total'
               type: DEPENDENT
               key: 'zimbra.account.quota.maximum[{#PLATFORM_ID},{#ACCOUNT_ID}]'
               delay: '0'
               history: 90d
               units: B
-              description: 'Total space of the account, offer included plus any additional space bought.'
+              description: |
+                Total space of the account, offer included plus any additional space bought.
+                Not to be confused with the "available" field of the OVH API which is the space left.
               preprocessing:
                 - type: JSONPATH
                   parameters:
                     - $.currentState.quota.maximum
-                - type: MULTIPLIER
-                  parameters:
-                    - '{$OVH_ZIMBRA_QUOTA_TO_BYTES}'
               master_item:
                 key: 'ovh-api-get.py["{$OVH_API_CONF_NAME}","/v2/zimbra/platform/{#PLATFORM_ID}/account/{#ACCOUNT_ID}"]'
               tags:
@@ -599,7 +595,8 @@ zabbix_export:
                     - |
                       var date = JSON.parse(value).currentState.quotaRefreshedAt;
                       if (!date) { throw "Space usage was never refreshed"; }
-                      return Date.parse(date);
+                      //OVH API v2 dates hold microseconds, Date.parse only accepts milliseconds
+                      return Date.parse(date.replace(/\.[0-9]+/, ""));
                   error_handler: DISCARD_VALUE
                 - type: MULTIPLIER
                   parameters:
@@ -636,7 +633,8 @@ zabbix_export:
                     - |
                       var date = JSON.parse(value).currentState.lastConnectionAt;
                       if (!date) { throw "Account never connected"; }
-                      return Date.parse(date);
+                      //OVH API v2 dates hold microseconds, Date.parse only accepts milliseconds
+                      return Date.parse(date.replace(/\.[0-9]+/, ""));
                   error_handler: DISCARD_VALUE
                 - type: MULTIPLIER
                   parameters:
@@ -728,7 +726,7 @@ zabbix_export:
                 last(/Futur-Tech OVH API/zimbra.account.quota.used[{#PLATFORM_ID},{#ACCOUNT_ID}])>last(/Futur-Tech OVH API/zimbra.account.quota.maximum[{#PLATFORM_ID},{#ACCOUNT_ID}])*{$OVH_ZIMBRA_QUOTA_WARN}/100
                 and {$OVH_ZIMBRA_IGNORE:"{#EMAIL}"}=0
               name: '{#EMAIL} account is almost full'
-              opdata: 'Used: {ITEM.LASTVALUE1} Available: {ITEM.LASTVALUE2}'
+              opdata: 'Used: {ITEM.LASTVALUE1} of {ITEM.LASTVALUE2}'
               url: 'https://www.ovh.com/manager/web-cloud/zimbra-mail'
               priority: AVERAGE
               dependencies:
@@ -741,7 +739,7 @@ zabbix_export:
                 last(/Futur-Tech OVH API/zimbra.account.quota.used[{#PLATFORM_ID},{#ACCOUNT_ID}])>last(/Futur-Tech OVH API/zimbra.account.quota.maximum[{#PLATFORM_ID},{#ACCOUNT_ID}])*{$OVH_ZIMBRA_QUOTA_CRIT}/100
                 and {$OVH_ZIMBRA_IGNORE:"{#EMAIL}"}=0
               name: '{#EMAIL} account is full'
-              opdata: 'Used: {ITEM.LASTVALUE1} Available: {ITEM.LASTVALUE2}'
+              opdata: 'Used: {ITEM.LASTVALUE1} of {ITEM.LASTVALUE2}'
               url: 'https://www.ovh.com/manager/web-cloud/zimbra-mail'
               priority: HIGH
           lld_macro_paths:
@@ -789,9 +787,6 @@ zabbix_export:
         - macro: '{$OVH_ZIMBRA_QUOTA_REFRESH_WARN}'
           value: 1d
           description: 'Trigger if the space usage of a Zimbra account has not been refreshed by OVH within this time'
-        - macro: '{$OVH_ZIMBRA_QUOTA_TO_BYTES}'
-          value: '1073741824'
-          description: 'The OVH API v2 does not document the unit of the Zimbra quota values. Default assumes GiB, set it to 1 if the API already returns bytes (compare the item value with the OVH Control Panel).'
         - macro: '{$OVH_ZIMBRA_QUOTA_WARN}'
           value: '95'
           description: 'Percentage of used space above which a Zimbra account is considered almost full'

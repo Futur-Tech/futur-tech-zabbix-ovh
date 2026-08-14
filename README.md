@@ -51,7 +51,10 @@ The template discovers Zimbra platforms and, for every platform, all of its emai
 
 OVH does not compute the space used in real time: the template periodically calls `/v2/zimbra/platform/{platformId}/refreshQuotaUsage` to ask for a recomputation, and triggers if that request fails or if the reported figures grow stale.
 
-**Space unit:** the OVH API v2 does not document the unit of the Zimbra quota values. The macro `{$OVH_ZIMBRA_QUOTA_TO_BYTES}` defaults to `1073741824` (values assumed to be GiB). Compare a *space available* item with the OVH Control Panel after the first run and set the macro to `1` if the API already answers in bytes. The *account is full* / *almost full* triggers compare used against available, so they are correct either way.
+Two details of the API v2 payload worth knowing:
+
+- Quota values are in bytes (a PRO account reports `53687091200`, i.e. 50 GiB).
+- `quota.available` is the space **left**, not the size of the account. The item *space total* maps to `quota.maximum`.
 
 ## Testing OVH API
 From Zabbix Server you can test API calls
