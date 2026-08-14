@@ -5,6 +5,7 @@
 # Usage: /usr/lib/zabbix/externalscripts/ovh-api-post.py <conf_name (without .conf)> <api_path>
 # Example:
 # /usr/lib/zabbix/externalscripts/ovh-api-post.py default_api /email/domain/test.fr/account/test/updateUsage ## Request quota update for email test@test.fr
+# /usr/lib/zabbix/externalscripts/ovh-api-post.py default_api /v2/zimbra/platform/00000000-0000-0000-0000-000000000000/refreshQuotaUsage ## Request quota update for a whole Zimbra platform
 
 
 import sys
@@ -36,7 +37,17 @@ client = ovh.Client(
     consumer_key=config['OVH_API']['consumer_key'],       # Consumer Key
 )
 
-result = client.post(api_path)
+# Routing a /v1 or /v2 path to the right base URL is done by python-ovh >= 1.1.0 only
+if api_path.startswith('/v2/') and not hasattr(client, '_get_target'):
+    print('The installed python-ovh module does not support OVH API v2, run: pip3 install -U ovh --break-system-packages')
+    exit(1)
+
+try:
+    result = client.post(api_path)
+except ovh.exceptions.InvalidResponse:
+    # Some API v2 calls (i.e. /v2/zimbra/platform/{platformId}/refreshQuotaUsage) answer with an
+    # empty body which python-ovh cannot decode. Nothing returned means nothing went wrong.
+    result = None
 
 # Pretty print
 print(json.dumps(result, indent=4))
