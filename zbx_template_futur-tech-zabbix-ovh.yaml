@@ -628,36 +628,6 @@ zabbix_export:
                   url: 'https://www.ovh.com/manager/web-cloud/zimbra-mail'
                   priority: WARNING
                   description: 'The space used reported for this account is stale, the "Zimbra quota usage refresh request" item of the platform is most likely failing.'
-            - uuid: b529b10bc6c94dd5b70f5e1a7276176b
-              name: '{#EMAIL} last connection'
-              type: DEPENDENT
-              key: 'zimbra.account.lastconnection[{#PLATFORM_ID},{#ACCOUNT_ID}]'
-              delay: '0'
-              history: 90d
-              units: unixtime
-              preprocessing:
-                - type: JAVASCRIPT
-                  parameters:
-                    - |
-                      var date = JSON.parse(value).currentState.lastConnectionAt;
-                      if (!date) { throw "Account never connected"; }
-                      //OVH API v2 dates hold microseconds, Date.parse only accepts milliseconds
-                      return Date.parse(date.replace(/\.[0-9]+/, ""));
-                  error_handler: DISCARD_VALUE
-                - type: MULTIPLIER
-                  parameters:
-                    - '0.001'
-              master_item:
-                key: 'ovh-api-get.py["{$OVH_API_CONF_NAME}","/v2/zimbra/platform/{#PLATFORM_ID}/account/{#ACCOUNT_ID}"]'
-              tags:
-                - tag: email
-                  value: '{#EMAIL}'
-                - tag: offer
-                  value: '{#OFFER}'
-                - tag: organization
-                  value: '{#ORGANIZATION}'
-                - tag: service
-                  value: zimbra
             - uuid: 4f74d5c668984bfba6cd608a006afe9c
               name: '{#EMAIL} status'
               type: DEPENDENT

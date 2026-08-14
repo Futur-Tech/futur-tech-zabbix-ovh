@@ -47,7 +47,7 @@ Requirements:
 - `python-ovh` **1.1.0 or later** (`deploy.sh` installs it with `pip3 install -U ovh`). Older versions cannot route a `/v2/` path and the items will report it.
 - The API token needs `GET` and `POST` on `/v2/zimbra/*`.
 
-The template discovers Zimbra platforms and, for every platform, all of its email accounts. It monitors the space used and available, the account status, whether OVH has blocked the account (spam or unpaid slot) and the last connection date.
+The template discovers Zimbra platforms and, for every platform, all of its email accounts. It monitors the space used and total, the account status and whether OVH has blocked the account (spam or unpaid slot).
 
 OVH does not compute the space used in real time: the template periodically calls `/v2/zimbra/platform/{platformId}/refreshQuotaUsage` to ask for a recomputation, and triggers if that request fails or if the reported figures grow stale.
 
